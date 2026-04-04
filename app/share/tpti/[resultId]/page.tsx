@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { tptiApi } from '@/lib/api/client';
 
 interface Props { params: Promise<{ resultId: string }> }
@@ -24,9 +25,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default function ShareTptiPage() {
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
-      <p style={{ fontSize: 16, color: '#64748B' }}>공유 페이지는 앱에서 확인하세요.</p>
-      <a href="/" style={{ color: '#3B82F6', fontWeight: 600 }}>TripSync 홈으로 →</a>
+    <div className="app-shell app-page">
+      <div className="app-content min-h-[100dvh] flex items-center justify-center py-16">
+        <div className="card-bezel w-full max-w-lg">
+          <div className="card-bezel-inner p-10 text-center">
+            <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-6">
+              <iconify-icon icon="solar:compass-bold-duotone" width="30" className="text-blue-500"></iconify-icon>
+            </div>
+            <span className="app-kicker mb-4">Shared Result</span>
+            <h1 className="text-3xl font-black tracking-tight text-zinc-900 mb-3">공유된 TPTI 결과입니다</h1>
+            <p className="text-sm font-normal text-zinc-700 leading-relaxed mb-8">
+              더 자세한 결과 해석과 여행방 연결은 TripSync 앱 화면에서 확인할 수 있습니다.
+            </p>
+            <Link href="/" className="btn-primary inline-flex w-auto px-6">
+              TripSync 홈으로 이동
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

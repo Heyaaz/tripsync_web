@@ -19,7 +19,7 @@ export function ScoreBars({ scores, animated = true }: ScoreBarsProps) {
         return (
           <div key={axis}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span className="text-zinc-300 font-bold text-sm">
+              <span className="text-zinc-700 font-bold text-sm">
                 {AXIS_LABELS[axis]}
               </span>
               <span style={{ fontSize: '13px', fontWeight: 700, color }}>

@@ -4,10 +4,10 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'TripSync — 갈등 없는 그룹 여행 플래너',
-  description: '취향 충돌을 AI가 조율하고 모두가 만족하는 충남 여행 일정을 자동 생성합니다.',
+  description: '서로 다른 여행 스타일을 TPTI로 분석하고, TripSync가 모두가 만족할 합의 일정을 만들어 드립니다.',
   openGraph: {
     title: 'TripSync — 갈등 없는 그룹 여행',
-    description: '8문항 TPTI 검사 → 그룹 갈등 분석 → AI 일정 3가지 자동 생성',
+    description: 'TPTI로 여행 성향을 분석하고, 그룹 갈등을 시각화해 AI 합의 일정을 제안합니다.',
     locale: 'ko_KR',
     type: 'website',
   },

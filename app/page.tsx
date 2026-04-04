@@ -62,6 +62,7 @@ export default function LandingPage() {
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
+          filter: saturate(1.05);
         }
       `}</style>
 
@@ -69,14 +70,14 @@ export default function LandingPage() {
 
         {/* Ambient blobs */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
-          <div className="glow-a absolute -top-56 -right-56 w-[750px] h-[750px] rounded-full bg-blue-300/20 blur-[140px]" />
-          <div className="glow-b absolute top-1/2 -left-72 w-[600px] h-[600px] rounded-full bg-violet-300/15 blur-[120px]" />
-          <div className="glow-c absolute bottom-0 right-1/3 w-[500px] h-[500px] rounded-full bg-sky-300/15 blur-[100px]" />
+          <div className="glow-a absolute -top-56 -right-56 w-[680px] h-[680px] rounded-full bg-blue-300/14 blur-[120px]" />
+          <div className="glow-b absolute top-1/2 -left-72 w-[540px] h-[540px] rounded-full bg-violet-300/10 blur-[108px]" />
+          <div className="glow-c absolute bottom-0 right-1/3 w-[460px] h-[460px] rounded-full bg-sky-300/10 blur-[92px]" />
         </div>
 
         {/* Nav */}
         <header className="fixed top-4 inset-x-0 z-50 flex justify-center pointer-events-none">
-          <nav className="flex items-center gap-5 bg-white/75 backdrop-blur-2xl px-5 py-2.5 rounded-2xl border border-white/60 shadow-[0_2px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] pointer-events-auto transition-shadow duration-300 hover:shadow-[0_4px_32px_rgba(0,0,0,0.11)]">
+          <nav className="flex items-center gap-5 bg-white px-5 py-2.5 rounded-2xl border border-zinc-200 shadow-[0_8px_28px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.92)] pointer-events-auto transition-shadow duration-300 hover:shadow-[0_10px_34px_rgba(15,23,42,0.1)]">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.45)]">
                 <iconify-icon icon="solar:routing-3-bold" width="16" style={{ color: 'white' }}></iconify-icon>
@@ -84,7 +85,7 @@ export default function LandingPage() {
               <span className="font-black text-sm tracking-tight text-zinc-900">TripSync</span>
             </div>
             <div className="w-px h-4 bg-zinc-200" />
-            <Link href="/tpti" className="text-xs font-bold text-zinc-400 hover:text-zinc-900 transition-colors duration-200">
+            <Link href="/tpti" className="text-[13px] font-medium text-zinc-700 hover:text-zinc-900 transition-colors duration-200">
               TPTI 검사
             </Link>
             <Link
@@ -107,7 +108,7 @@ export default function LandingPage() {
               <span className="gradient-text">취향 충돌</span> 없이.
             </h1>
 
-            <p className="reveal d2 text-[17px] md:text-lg text-zinc-500 font-medium max-w-md mx-auto leading-relaxed mb-10 break-keep-all">
+            <p className="reveal d2 text-[17px] md:text-lg text-zinc-700 font-medium max-w-lg mx-auto leading-relaxed mb-10 break-keep-all">
               서로 다른 여행 스타일을 TPTI로 분석하고,<br />
               TripSync가 모두가 만족할 합의 일정을 만들어 드립니다.
             </p>
@@ -122,14 +123,14 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/tpti"
-                className="spring px-8 py-4 rounded-2xl bg-white text-zinc-800 font-bold text-[15px] flex items-center justify-center border border-zinc-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+                className="spring px-8 py-4 rounded-2xl bg-white text-zinc-900 font-bold text-[15px] flex items-center justify-center border border-zinc-200 shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
               >
                 내 여행 성향 알아보기
               </Link>
             </div>
 
             {/* Feature Pillars - meaningful, not fake stats */}
-            <div className="reveal d4 w-full bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-zinc-100">
+            <div className="reveal d4 w-full bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-[0_12px_32px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-zinc-100">
               {[
                 { icon: 'solar:compass-bold-duotone', color: '#2563EB', bg: 'bg-blue-50', label: 'TPTI 4개 축 분석', desc: '활동성·기록·예산·테마' },
                 { icon: 'solar:danger-triangle-bold-duotone', color: '#EA580C', bg: 'bg-orange-50', label: '그룹 갈등 시각화', desc: '충돌 지점 미리 파악' },
@@ -140,8 +141,8 @@ export default function LandingPage() {
                     <iconify-icon icon={item.icon} width="20" style={{ color: item.color }}></iconify-icon>
                   </div>
                   <div className="text-left">
-                    <div className="text-[13px] font-bold text-zinc-900">{item.label}</div>
-                    <div className="text-[11px] text-zinc-400 font-medium">{item.desc}</div>
+                    <div className="text-[14px] font-semibold text-zinc-900">{item.label}</div>
+                    <div className="text-[13px] text-zinc-800 font-normal tracking-normal">{item.desc}</div>
                   </div>
                 </div>
               ))}
@@ -151,7 +152,7 @@ export default function LandingPage() {
           {/* ── How It Works ── */}
           <section className="mb-32">
             <div className="reveal text-center mb-14">
-              <div className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3">이렇게 작동합니다</div>
+              <div className="text-sm font-medium text-zinc-600 mb-3">이렇게 작동합니다</div>
               <h2 className="text-3xl md:text-4xl font-black text-zinc-900 tracking-tight break-keep-all">
                 3단계로 완성되는<br />그룹 여행 플래너
               </h2>
@@ -196,18 +197,18 @@ export default function LandingPage() {
                   ctaColor: 'text-violet-600',
                 },
               ].map((item, i) => (
-                <div key={item.step} className={`reveal card-lift bg-white rounded-2xl p-7 border border-zinc-100 relative overflow-hidden`} style={{ transitionDelay: `${i * 80}ms` }}>
-                  <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-40 blur-2xl pointer-events-none" style={{ backgroundColor: item.color }} />
+                <div key={item.step} className={`reveal card-lift bg-white rounded-2xl p-7 border border-zinc-200/70 relative overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,0.05)]`} style={{ transitionDelay: `${i * 80}ms` }}>
+                  <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-25 blur-2xl pointer-events-none" style={{ backgroundColor: item.color }} />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
                       <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center border ${item.border}`}>
                         <iconify-icon icon={item.icon} width="22" style={{ color: item.color }}></iconify-icon>
                       </div>
-                      <span className="text-[28px] font-black text-zinc-400 leading-none">{item.step}</span>
+                      <span className="text-[28px] font-black text-zinc-500 leading-none">{item.step}</span>
                     </div>
                     <h3 className="text-lg font-black text-zinc-900 mb-2.5 tracking-tight">{item.title}</h3>
-                    <p className="text-zinc-500 text-[13px] leading-relaxed break-keep-all mb-6">{item.desc}</p>
-                    <Link href={item.href} className={`flex items-center gap-1 text-xs font-bold ${item.ctaColor}`}>
+                    <p className="text-zinc-800 text-[14px] leading-relaxed break-keep-all mb-6 font-normal tracking-normal">{item.desc}</p>
+                    <Link href={item.href} className={`flex items-center gap-1 text-[13px] font-medium ${item.ctaColor}`}>
                       {item.cta}
                       <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
                     </Link>
@@ -219,18 +220,18 @@ export default function LandingPage() {
 
           {/* ── Consensus Engine Feature ── */}
           <div className="mb-16">
-            <div className="reveal bg-white rounded-[32px] p-8 md:p-14 flex flex-col lg:flex-row items-start gap-12 overflow-hidden relative border border-zinc-100 shadow-[0_8px_48px_rgba(0,0,0,0.07)]">
+            <div className="reveal bg-white rounded-[32px] p-8 md:p-14 flex flex-col lg:flex-row items-start gap-12 overflow-hidden relative border border-zinc-200 shadow-[0_14px_42px_rgba(15,23,42,0.06)]">
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_0%_100%,rgba(16,185,129,0.05),transparent_50%)] pointer-events-none" />
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_100%_0%,rgba(37,99,235,0.04),transparent_50%)] pointer-events-none" />
 
               <div className="relative z-10 flex-1">
-                <div className="inline-flex h-6 items-center px-3 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-100">
+                <div className="inline-flex h-7 items-center px-3 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-medium uppercase tracking-[0.16em] mb-6 border border-emerald-100">
                   Consensus Engine
                 </div>
                 <h3 className="text-3xl md:text-[42px] font-black text-zinc-900 mb-5 leading-[1.1] tracking-tight break-keep-all">
                   아무도 소외되지 않는<br />여행 일정을 만듭니다.
                 </h3>
-                <p className="text-zinc-500 text-[15px] leading-relaxed break-keep-all max-w-md font-medium mb-8">
+                <p className="text-zinc-800 text-[16px] leading-relaxed break-keep-all max-w-md font-normal tracking-normal mb-8">
                   전국 명소 데이터를 기반으로 그룹 구성원의 취향 갈등을 분석해, AI가 3가지 맞춤 여행 코스를 제안합니다.
                 </p>
                 <Link
@@ -254,8 +255,8 @@ export default function LandingPage() {
                       <iconify-icon icon={f.icon} width="18" style={{ color: f.color }}></iconify-icon>
                     </div>
                     <div>
-                      <div className="text-zinc-900 text-[13px] font-bold mb-0.5">{f.label}</div>
-                      <div className="text-zinc-500 text-[11px] leading-relaxed">{f.desc}</div>
+                      <div className="text-zinc-900 text-[14px] font-semibold mb-0.5">{f.label}</div>
+                      <div className="text-zinc-700 text-[14px] leading-relaxed font-normal tracking-normal">{f.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -273,7 +274,7 @@ export default function LandingPage() {
               <h2 className="text-xl md:text-2xl font-black text-white tracking-tight mb-3 break-keep-all">
                 여행 계획, 더 이상 혼자 짊어지지 마세요.
               </h2>
-              <p className="text-blue-200/60 text-sm font-medium mb-7 break-keep-all">
+              <p className="text-blue-50/92 text-[15px] font-medium mb-7 break-keep-all">
                 여행방을 만들고 링크를 공유하면 끝 — 나머지는 TripSync와 함께 하세요.
               </p>
               <div className="flex flex-col sm:flex-row gap-2.5">
@@ -302,8 +303,8 @@ export default function LandingPage() {
               </div>
               <span className="font-black text-sm text-zinc-900">TripSync</span>
             </div>
-            <p className="text-[12px] font-medium text-zinc-400">© 2026 TripSync</p>
-            <div className="flex gap-4 text-zinc-300">
+            <p className="text-[13px] font-normal text-zinc-700">© 2026 TripSync</p>
+            <div className="flex gap-4 text-zinc-500">
               <iconify-icon icon="solar:figma-bold" width="17" className="cursor-pointer hover:text-zinc-600 transition-colors duration-200"></iconify-icon>
               <iconify-icon icon="solar:github-bold" width="17" className="cursor-pointer hover:text-zinc-600 transition-colors duration-200"></iconify-icon>
             </div>

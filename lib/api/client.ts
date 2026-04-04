@@ -44,7 +44,7 @@ export const tptiApi = {
 
 // ─── Room API ─────────────────────────────────────────────
 export const roomApi = {
-  create: (data: { destination: string; tripDate: string }) =>
+  create: (data: { destination: string; tripDate: string; tripStartDate?: string; tripEndDate?: string }) =>
     apiClient.post('/rooms', data),
 
   getById: (id: number) => apiClient.get(`/rooms/${id}`),
@@ -58,7 +58,7 @@ export const roomApi = {
 
   getConflictMap: (id: number) => apiClient.get(`/rooms/${id}/conflict-map`),
 
-  generateSchedule: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string }) =>
+  generateSchedule: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>
     apiClient.post(`/rooms/${id}/generate-schedule`, data),
 
   confirmSchedule: (id: number, data: { optionType: string }) =>
@@ -69,6 +69,6 @@ export const roomApi = {
 export const scheduleApi = {
   getById: (id: number) => apiClient.get(`/schedules/${id}`),
   getShareSchedule: (scheduleId: number) => apiClient.get(`/share/schedules/${scheduleId}`),
-  regenerate: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string }) =>
+  regenerate: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>
     apiClient.post(`/schedules/${id}/regenerate`, data),
 };

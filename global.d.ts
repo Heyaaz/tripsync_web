@@ -1,9 +1,14 @@
-import React from 'react';
+import type { CSSProperties, DetailedHTMLProps, HTMLAttributes } from 'react';
 
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
-      'iconify-icon': any;
+      'iconify-icon': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
+        icon?: string;
+        width?: string | number;
+        height?: string | number;
+        style?: CSSProperties;
+      };
     }
   }
 }

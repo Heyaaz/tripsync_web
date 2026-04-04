@@ -194,4 +194,5 @@ export const OPTION_LABELS: Record<string, { label: string; emoji: string; color
   balanced: { label: '균형형', emoji: '⚖️', color: '#3B82F6' },
   individual: { label: '개성형', emoji: '🎭', color: '#8B5CF6' },
   discovery: { label: '지역 발굴형', emoji: '🗺️', color: '#10B981' },
+  manual: { label: '직접 구성형', emoji: '✍️', color: '#F97316' },
 };

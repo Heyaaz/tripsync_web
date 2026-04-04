@@ -45,6 +45,8 @@ export interface Room {
   roomId: number;
   destination: string;
   tripDate: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
   shareCode: string;
   status: RoomStatus;
   hostUserId: number;
@@ -113,7 +115,7 @@ export interface ScheduleSlot {
   place: Place;
 }
 
-export type OptionType = 'balanced' | 'individual' | 'discovery';
+export type OptionType = 'balanced' | 'individual' | 'discovery' | 'manual';
 
 export interface ScheduleOption {
   optionType: OptionType;

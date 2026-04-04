@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { roomApi } from '@/lib/api/client';
 import { TptiRadarChart, MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
 import {
-  AXIS_LABELS, SEVERITY_COLORS, SEVERITY_BG, SEVERITY_ICONS, SEVERITY_LABELS, getSeverity,
+  AXIS_LABELS, SEVERITY_ICONS, SEVERITY_LABELS, getSeverity,
 } from '@/lib/utils/tpti';
+import { formatTripDateRange } from '@/lib/utils/date';
 import type { ConflictMap, RoomMember, TptiScores } from '@/lib/types';
 
 // Mock data generation for demo
@@ -61,9 +62,7 @@ export default function ConflictPage() {
   const [loading, setLoading] = useState(true);
   const [copyDone, setCopyDone] = useState(false);
 
-  useEffect(() => { loadData(); }, [roomId]);
-
-  async function loadData() {
+  const loadData = useEffectEvent(async () => {
     setLoading(true);
     try {
       const [memberRes, conflictRes] = await Promise.all([
@@ -90,7 +89,11 @@ export default function ConflictPage() {
     } finally {
       setLoading(false);
     }
-  }
+  });
+
+  useEffect(() => {
+    loadData();
+  }, [roomId]);
 
   function copyShareLink() {
     const code = currentRoom?.shareCode ?? 'DEMO001';
@@ -103,9 +106,9 @@ export default function ConflictPage() {
 
   if (loading) {
     return (
-      <div className="app-shell items-center justify-center">
+      <div className="app-shell app-page items-center justify-center">
         <div className="w-12 h-12 rounded-full border-4 border-zinc-200 border-t-orange-500 animate-spin" />
-        <p className="mt-4 font-bold text-orange-600">데이터를 분석하고 있습니다...</p>
+        <p className="mt-4 font-bold text-orange-600">데이터를 분석하고 있습니다…</p>
       </div>
     );
   }
@@ -123,67 +126,57 @@ export default function ConflictPage() {
   }));
 
   return (
-    <div className="app-shell">
-      {/* App Header */}
-      <header className="app-header py-4 px-6 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/')} className="hover:opacity-70 transition-opacity">
-            <iconify-icon icon="solar:round-alt-arrow-left-bold-duotone" width="28" className="text-zinc-700"></iconify-icon>
-          </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-600">그룹 갈등 지도</h1>
-            {currentRoom && (
-              <p className="text-xs font-semibold text-zinc-600">
-                {currentRoom.destination} · {currentRoom.tripDate} · 참여 {members.length}명
-              </p>
-            )}
-          </div>
+    <div className="app-shell app-page">
+      <div className="app-topbar">
+        <button onClick={() => router.push('/')} className="app-icon-button" aria-label="홈으로">
+          <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <div className="app-topbar-title">그룹 갈등 지도</div>
+          {currentRoom && (
+            <div className="app-topbar-meta">{currentRoom.destination} · {formatTripDateRange(currentRoom.tripStartDate, currentRoom.tripEndDate, currentRoom.tripDate)} · 참여 {members.length}명</div>
+          )}
         </div>
-      </header>
+        <button onClick={copyShareLink} className="app-link-button px-4 py-2 text-sm shrink-0" type="button">
+          <iconify-icon icon="solar:share-bold-duotone" width="18"></iconify-icon>
+          {copyDone ? '복사됨' : '초대 링크'}
+        </button>
+      </div>
 
-      <div className="app-content pt-6 flex flex-col gap-6">
+      <div className="app-content pt-14 flex flex-col gap-6">
         {/* Members Status Card */}
-        <div className="card-app p-5 animate-fadeInUp">
+        <div className="card-app p-6 md:p-7 animate-fadeInUp">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <iconify-icon icon="solar:users-group-rounded-bold-duotone" className="text-blue-400 text-xl"></iconify-icon>
+            <h2 className="text-lg font-black tracking-tight flex items-center gap-2.5">
+              <iconify-icon icon="solar:users-group-rounded-bold-duotone" className="text-blue-500 text-[22px]"></iconify-icon>
               동행자 현황
             </h2>
-            <button
-              onClick={copyShareLink}
-              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${
-                copyDone 
-                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
-                  : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
-              }`}
-            >
-              {copyDone ? '✓ 링크 복사됨' : '🔗 초대 링크 복사'}
-            </button>
+            <span className="app-chip bg-zinc-100 text-zinc-700 border border-zinc-200">{members.length}명</span>
           </div>
           
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {members.map((m, i) => {
               const color = MEMBER_COLORS[i % MEMBER_COLORS.length];
               return (
-                <div key={m.userId} className="flex items-center gap-3 p-3 bg-white border border-zinc-200 rounded-xl shadow-sm hover:border-zinc-300 transition-colors">
+                <div key={m.userId} className="flex items-center gap-4 p-4 md:p-5 bg-white border border-zinc-100 rounded-[24px] shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-colors">
                   <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border-2"
-                    style={{ backgroundColor: `${color}20`, color: color, borderColor: `${color}50` }}
+                    className="w-12 h-12 rounded-full flex items-center justify-center font-black text-base shrink-0 border-2"
+                    style={{ backgroundColor: `${color}18`, color: color, borderColor: `${color}55` }}
                   >
                     {m.nickname[0]}
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-sm flex items-center gap-2">
+                    <p className="font-black text-[15px] text-zinc-900 flex items-center gap-2">
                       {m.nickname}
-                      {m.role === 'host' && <span className="bg-blue-50 text-blue-700 text-[10px] py-0.5 px-2 rounded-full font-bold border border-blue-100">방장</span>}
+                      {m.role === 'host' && <span className="bg-blue-50 text-blue-700 text-[11px] py-1 px-2.5 rounded-full font-bold border border-blue-100">방장</span>}
                     </p>
-                    <p className="text-[11px] text-zinc-600 font-medium truncate">{m.characterName || '유형 분석 전'}</p>
+                    <p className="text-sm text-zinc-700 font-normal mt-0.5 truncate">{m.characterName || '유형 분석 전'}</p>
                   </div>
-                  <div>
+                  <div className="shrink-0">
                     {m.tptiCompleted ? (
-                      <span className="badge-green text-[10px]">완료</span>
+                      <span className="app-status-pill success">완료</span>
                     ) : (
-                      <span className="badge-orange text-[10px]">대기 중</span>
+                      <span className="app-status-pill waiting">대기 중</span>
                     )}
                   </div>
                 </div>
@@ -192,7 +185,7 @@ export default function ConflictPage() {
           </div>
           
           {pendingMembers.length > 0 && (
-            <div className="mt-4 p-3 bg-orange-50 border border-orange-100 rounded-lg flex gap-2">
+            <div className="app-alert app-alert-warning mt-4">
               <iconify-icon icon="solar:hourglass-bold-duotone" className="text-orange-500 mt-0.5"></iconify-icon>
               <p className="text-xs font-medium text-orange-800">
                 {pendingMembers.map((m) => m.nickname).join(', ')}님이 아직 검사 중입니다. 전원이 완료해야 정확한 지도가 완성됩니다.
@@ -203,16 +196,16 @@ export default function ConflictPage() {
 
         {/* TPTI Radar Chart */}
         {isReady && conflictMap && (
-          <div className="card-app p-5 animate-fadeInUp delay-1">
-            <h2 className="text-base font-bold flex items-center gap-2 mb-2">
-               <iconify-icon icon="solar:pie-chart-3-bold-duotone" className="text-purple-600 text-xl"></iconify-icon>
+          <div className="card-app p-6 md:p-7 animate-fadeInUp delay-1">
+            <h2 className="text-lg font-black tracking-tight flex items-center gap-2 mb-2">
+               <iconify-icon icon="solar:pie-chart-3-bold-duotone" className="text-purple-600 text-[22px]"></iconify-icon>
                취향 레이더
             </h2>
-            <p className="text-xs text-zinc-600 font-medium mb-4">그래프가 겹칠수록 해당 축의 취향이 비슷합니다.</p>
+            <p className="text-sm text-zinc-700 font-normal mb-5">그래프가 겹칠수록 해당 축의 취향이 비슷합니다.</p>
 
-            <div className="flex flex-wrap gap-3 mb-4">
-              {chartData.map((m, i) => (
-                <div key={m.userId} className="flex items-center gap-1.5">
+            <div className="flex flex-wrap gap-3 mb-5">
+              {chartData.map((m) => (
+                <div key={m.userId} className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-zinc-100 shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
                   <div className="w-3 h-3 rounded-full" style={{ background: m.color }} />
                   <span className="text-xs font-bold text-zinc-700">{m.nickname}</span>
                 </div>
@@ -227,14 +220,14 @@ export default function ConflictPage() {
 
         {/* Conflict Analysis */}
         {isReady && conflictMap && (
-          <div className="card-app p-5 animate-fadeInUp delay-2 mb-10">
-            <h2 className="text-base font-bold flex items-center gap-2 mb-4">
-               <iconify-icon icon="solar:danger-triangle-bold-duotone" className="text-red-500 text-xl"></iconify-icon>
+          <div className="card-app p-6 md:p-7 animate-fadeInUp delay-2 mb-10">
+            <h2 className="text-lg font-black tracking-tight flex items-center gap-2 mb-4">
+               <iconify-icon icon="solar:danger-triangle-bold-duotone" className="text-red-500 text-[22px]"></iconify-icon>
                충돌 심층 분석
             </h2>
 
             {conflictMap.summaryText && (
-              <div className="p-4 bg-orange-50 border-l-4 border-l-orange-500 rounded-r-xl mb-5">
+              <div className="p-4 bg-orange-50 border border-orange-100 rounded-[20px] mb-5">
                 <p className="text-sm font-medium leading-relaxed text-zinc-900">{conflictMap.summaryText}</p>
               </div>
             )}
@@ -243,25 +236,25 @@ export default function ConflictPage() {
               {conflictMap.conflictAxes.map((ca) => {
                 const isConflict = ca.severity !== 'none';
                 return (
-                  <div key={ca.axis} className={`p-4 rounded-xl border ${isConflict ? 'bg-red-50 border-red-100' : 'bg-white border-zinc-200 shadow-sm'}`}>
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{SEVERITY_ICONS[ca.severity]}</span>
-                        <span className="font-bold text-sm">{AXIS_LABELS[ca.axis]}</span>
+                  <div key={ca.axis} className={`p-5 rounded-[22px] border ${isConflict ? 'bg-[#fff7f5] border-[#ffd7cf]' : 'bg-white border-zinc-100 shadow-[0_8px_24px_rgba(15,23,42,0.05)]'}`}>
+                    <div className="flex justify-between items-center mb-5 gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[20px]">{SEVERITY_ICONS[ca.severity]}</span>
+                        <span className="font-black text-[16px] text-zinc-900">{AXIS_LABELS[ca.axis]}</span>
                       </div>
-                      <div className="flex gap-2 items-center">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ca.severity === 'critical' ? 'bg-red-500 text-white' : ca.severity === 'moderate' ? 'bg-orange-500 text-white' : ca.severity === 'minor' ? 'bg-yellow-500 text-black' : 'bg-emerald-500 text-white'}`}>
+                      <div className="flex gap-2 items-center shrink-0">
+                        <span className={`text-[11px] px-2.5 py-1 rounded-full font-black ${ca.severity === 'critical' ? 'bg-red-500 text-white' : ca.severity === 'moderate' ? 'bg-orange-500 text-white' : ca.severity === 'minor' ? 'bg-yellow-400 text-zinc-900' : 'bg-emerald-500 text-white'}`}>
                           {SEVERITY_LABELS[ca.severity]}
                         </span>
-                        <span className="text-xs font-black text-zinc-600 tracking-wider">±{ca.gap}</span>
+                        <span className="text-sm font-black text-zinc-600 tracking-tight">±{ca.gap}</span>
                       </div>
                     </div>
 
-                    <div className="space-y-2.5">
-                      {ca.members.map((mem, i) => (
+                    <div className="space-y-3.5">
+                      {ca.members.map((mem) => (
                         <div key={mem.userId} className="flex items-center gap-3">
-                          <span className="text-[11px] font-bold text-zinc-700 w-12 truncate">{mem.nickname}</span>
-                          <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                          <span className="text-[13px] font-bold text-zinc-700 w-14 truncate">{mem.nickname}</span>
+                          <div className="flex-1 h-[10px] bg-white border border-black/5 rounded-full overflow-hidden shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)]">
                             <div 
                               className="h-full rounded-full transition-all duration-1000 ease-out"
                               style={{ 
@@ -270,7 +263,7 @@ export default function ConflictPage() {
                               }} 
                             />
                           </div>
-                          <span className="text-[11px] font-black text-zinc-700 w-6 text-right">{mem.score}</span>
+                          <span className="text-[13px] font-black text-zinc-700 w-7 text-right">{mem.score}</span>
                         </div>
                       ))}
                     </div>
@@ -280,12 +273,12 @@ export default function ConflictPage() {
             </div>
 
             {conflictMap.commonAxes.length > 0 && (
-              <div className="mt-5 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+              <div className="mt-5 p-4 bg-emerald-50 border border-emerald-100 rounded-[20px]">
                 <div className="flex items-center gap-2 mb-1">
                   <iconify-icon icon="solar:shield-check-bold" className="text-emerald-500 text-lg"></iconify-icon>
                   <p className="text-sm font-bold text-emerald-700">공통 안전 지대</p>
                 </div>
-                <p className="text-xs font-medium text-emerald-800/80 pl-6">
+                <p className="text-sm font-normal text-emerald-800 pl-6">
                   {conflictMap.commonAxes.map((a) => AXIS_LABELS[a]).join(' · ')}에서 모두 의견이 비슷합니다. 일정의 기본 베이스캠프로 활용됩니다.
                 </p>
               </div>
@@ -295,22 +288,22 @@ export default function ConflictPage() {
 
         {/* Not ready state */}
         {!isReady && (
-          <div className="card-glass bg-white border-zinc-200 p-8 text-center flex flex-col items-center">
+          <div className="card-glass p-8 text-center flex flex-col items-center">
             <div className="w-20 h-20 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mb-6">
               <iconify-icon icon="solar:user-plus-bold-duotone" width="40" className="text-blue-500"></iconify-icon>
             </div>
-            <h3 className="heading-sm font-bold mb-2 text-zinc-900">동행자를 기다리고 있어요</h3>
-            <p className="body-sm text-zinc-600 font-medium mb-8 max-w-[240px]">최소 2명이 검사를 완료해야 서로의 취향 차이를 보여주는 지도가 만들어집니다.</p>
+            <h3 className="text-2xl font-black tracking-tight mb-2 text-zinc-900">동행자를 기다리고 있어요</h3>
+            <p className="text-sm text-zinc-700 font-normal leading-relaxed mb-8 max-w-[260px]">최소 2명이 검사를 완료해야 서로의 취향 차이를 보여주는 지도가 만들어집니다.</p>
             <button onClick={copyShareLink} className="btn-primary w-full max-w-[200px]">
-              {copyDone ? '✓ 링크 복사 완료!' : '🔗 초대 링크 복사'}
+              {copyDone ? '링크 복사 완료!' : '초대 링크 복사'}
             </button>
           </div>
         )}
 
         {/* Create Schedule CTA */}
         {isReady && isHost && (
-           <div className="fixed bottom-0 inset-x-0 p-6 bg-gradient-to-t from-white via-white to-transparent z-30 pointer-events-none">
-             <div className="max-w-md mx-auto pointer-events-auto">
+           <div className="app-sticky-cta pointer-events-none">
+             <div className="pointer-events-auto">
                <button
                  className="btn-pill w-full justify-center py-4 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-xl border border-blue-400 group"
                  onClick={() => router.push(`/rooms/${roomId}/schedule`)}
@@ -323,9 +316,9 @@ export default function ConflictPage() {
         )}
 
         {isReady && !isHost && (
-          <div className="p-5 text-center bg-zinc-50 border border-zinc-200 rounded-xl mb-6 shadow-sm">
+          <div className="p-5 text-center bg-zinc-50 border border-zinc-200 rounded-[20px] mb-6 shadow-sm">
             <p className="text-sm font-bold text-zinc-700 mb-1">방장이 AI 일정을 만들 수 있어요</p>
-            <p className="text-xs text-zinc-500">생성이 완료되면 공유받은 링크에서 확인할 수 있습니다.</p>
+            <p className="text-sm font-normal text-zinc-700">생성이 완료되면 공유받은 링크에서 확인할 수 있습니다.</p>
           </div>
         )}
         

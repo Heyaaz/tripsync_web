@@ -41,7 +41,7 @@ export default function TptiPage() {
     const char = getCharacter(scores);
 
     const result: TptiResult = {
-      resultId: Date.now(),
+      resultId: 0,
       userId: user?.id ?? 0,
       nickname: user?.nickname ?? nickname,
       scores,
@@ -72,10 +72,10 @@ export default function TptiPage() {
 
   if (step === 'submitting') {
     return (
-      <div className="app-shell items-center justify-center">
+      <div className="app-shell app-page items-center justify-center">
         <div className="flex flex-col items-center gap-6 animate-pulse-soft">
           <div className="w-16 h-16 rounded-full border-4 border-zinc-200 border-t-blue-500 animate-spin" />
-          <p className="body-lg font-bold text-zinc-900">TPTI 데이터를 분석하고 있습니다...</p>
+          <p className="body-lg font-bold text-zinc-900">TPTI 데이터를 분석하고 있습니다…</p>
         </div>
       </div>
     );
@@ -83,61 +83,83 @@ export default function TptiPage() {
 
   if (step === 'intro') {
     return (
-      <div className="app-shell">
-        <div className="app-content flex flex-col justify-center min-h-[100dvh]">
-          <div className="card-bezel w-full animate-fadeInUp">
-            <div className="card-bezel-inner p-8 md:p-12">
-              <button onClick={() => router.push('/')} className="mb-8 opacity-60 hover:opacity-100 transition-opacity">
-                <iconify-icon icon="solar:arrow-left-linear" width="28" className="text-zinc-700"></iconify-icon>
-              </button>
-              
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-6">
-                <iconify-icon icon="solar:compass-square-bold-duotone" width="32" style={{ color: '#3B82F6' }}></iconify-icon>
-              </div>
+      <div className="app-shell app-page">
+        <div className="app-topbar">
+          <button onClick={() => router.push('/')} className="app-icon-button" aria-label="홈으로">
+            <iconify-icon icon="solar:arrow-left-linear" width="22"></iconify-icon>
+          </button>
+          <div className="min-w-0 flex-1 text-center">
+            <div className="app-topbar-title">TPTI 검사</div>
+            <div className="app-topbar-meta">8개의 질문으로 나의 여행 취향을 빠르게 확인합니다</div>
+          </div>
+          <div className="w-11 shrink-0" />
+        </div>
 
-              <h1 className="heading-lg mb-4 text-zinc-900">TPTI 여행 유형 검사</h1>
-              <p className="body-lg mb-10 text-zinc-500">나의 여행 취향을 4가지 핵심 축으로 분류하여, 동행자와의 갈등 지점을 미리 예측합니다. 단 8개의 문항, 30초면 충분합니다.</p>
+        <div className="app-content flex flex-col justify-center min-h-[100dvh] py-24">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] items-start">
+            <section className="app-hero-panel animate-fadeInUp">
+              <span className="app-kicker mb-5">
+                <iconify-icon icon="solar:compass-bold-duotone" width="14"></iconify-icon>
+                Travel Preference Test
+              </span>
+              <h1 className="app-section-title mb-4">여행 성향을 먼저 파악하면<br />동행자와 덜 부딪힙니다</h1>
+              <p className="app-section-copy mb-8">
+                TPTI는 활동성, 기록, 예산, 테마의 네 축으로 여행 취향을 분류해
+                동행자와의 갈등 지점을 미리 예상할 수 있게 도와줍니다.
+              </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {AXIS_INFO.map((a) => (
-                  <div key={a.axis} className="bg-white p-4 rounded-xl border border-zinc-200 flex items-center gap-4 shadow-sm">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-opacity-30 ${a.colorClass}`}>
+                  <div key={a.axis} className="app-info-row">
+                    <div className={`app-info-icon ${a.colorClass}`}>
                       <iconify-icon icon={a.icon} width="20"></iconify-icon>
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-zinc-900 mb-0.5">{a.axis}</div>
-                      <div className="text-[13px] text-zinc-700 font-medium">{a.desc}</div>
+                      <div className="text-sm font-semibold text-zinc-900 mb-0.5">{a.axis}</div>
+                      <div className="text-sm font-normal text-zinc-700 leading-relaxed">{a.desc}</div>
                     </div>
                   </div>
                 ))}
               </div>
+            </section>
 
-              {!user && (
-                <div className="mb-8">
-                  <label className="block text-sm font-bold text-zinc-600 mb-3">검사에 사용할 닉네임</label>
-                  <input
-                    className="input-field max-w-sm"
-                    placeholder="예: 예민한 탐험가"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    maxLength={12}
-                  />
-                  {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
+            <div className="card-bezel w-full max-w-xl mx-auto animate-fadeInUp">
+              <div className="card-bezel-inner p-8 md:p-10">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-6">
+                  <iconify-icon icon="solar:compass-square-bold-duotone" width="32" style={{ color: '#3B82F6' }}></iconify-icon>
                 </div>
-              )}
 
-              <button
-                className="btn-primary w-full sm:w-auto"
-                onClick={() => {
-                  if (!user && nickname.trim().length < 2) {
-                    setError('닉네임을 2자 이상 입력해주세요');
-                    return;
-                  }
-                  setStep('questions');
-                }}
-              >
-                검사 시작하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
-              </button>
+                <span className="app-kicker mb-4">Quick Setup</span>
+                <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">30초 안에 시작할 수 있어요</h2>
+                <p className="body-md mb-8 text-zinc-700">검사를 완료하면 결과 페이지에서 나의 유형을 보고, 바로 여행방 생성까지 이어갈 수 있습니다.</p>
+
+                {!user && (
+                  <div className="mb-8">
+                    <label className="block text-sm font-medium text-zinc-700 mb-3">검사에 사용할 닉네임</label>
+                    <input
+                      className="input-field max-w-sm"
+                      placeholder="예: 예민한 탐험가"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      maxLength={12}
+                    />
+                    {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
+                  </div>
+                )}
+
+                <button
+                  className="btn-primary w-full sm:w-auto"
+                  onClick={() => {
+                    if (!user && nickname.trim().length < 2) {
+                      setError('닉네임을 2자 이상 입력해주세요');
+                      return;
+                    }
+                    setStep('questions');
+                  }}
+                >
+                  검사 시작하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -147,71 +169,71 @@ export default function TptiPage() {
 
   // Questions step
   return (
-    <div className="app-shell">
-      <div className="app-content relative !pb-0 flex flex-col pt-6 md:pt-12 min-h-[100dvh]">
-        {/* Top Header */}
-        <div className="flex items-center justify-between mb-8 z-20">
-          <button onClick={handleBack} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center hover:bg-zinc-200 transition-colors">
-            <iconify-icon icon="solar:arrow-left-linear" width="24" className="text-zinc-700"></iconify-icon>
-          </button>
-          <div className="badge badge-zinc">
-            {currentQ + 1} / {TPTI_QUESTIONS.length}
-          </div>
-          <div className="w-10" />
+    <div className="app-shell app-page">
+      <div className="app-topbar">
+        <button onClick={handleBack} className="app-icon-button" aria-label="이전 질문">
+          <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <div className="app-topbar-title">질문 {currentQ + 1} / {TPTI_QUESTIONS.length}</div>
+          <div className="app-topbar-meta">가장 나다운 여행 스타일에 가깝게 선택해 주세요</div>
         </div>
+        <div className="app-chip bg-zinc-100 text-zinc-700 border border-zinc-200">
+          {Math.round(progress)}%
+        </div>
+      </div>
 
-        {/* Progress bar */}
-        <div className="score-bar-track mb-12">
+      <div className="app-content relative !pb-0 flex flex-col pt-10 md:pt-14 min-h-[100dvh]">
+        <div className="score-bar-track mb-10">
           <div className="score-bar-fill bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${progress}%` }} />
         </div>
 
-        {/* Question Area */}
         <div className="flex-1 flex flex-col justify-center pb-24 z-10" key={currentQ}>
-           <div className="animate-slideInRight">
-              <div className="mb-6">
-                <span className={`badge ${AXIS_COLOR[q.axis]}`}>
-                  <iconify-icon icon={AXIS_ICON[q.axis]} className="mr-1"></iconify-icon>
-                  {AXIS_KR[q.axis]}
-                </span>
-              </div>
-              
-              <h2 className="heading-md md:heading-lg mb-10 leading-snug text-zinc-900">
-                {q.text}
-              </h2>
+          <div className="card-glass p-6 md:p-8 animate-slideInRight">
+            <div className="mb-6">
+              <span className={`badge ${AXIS_COLOR[q.axis]}`}>
+                <iconify-icon icon={AXIS_ICON[q.axis]} className="mr-1"></iconify-icon>
+                {AXIS_KR[q.axis]}
+              </span>
+            </div>
 
-              <div className="flex flex-col gap-3">
-                {LIKERT_OPTIONS.map((opt) => {
-                  const isSelected = answers[currentQ] === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => handleAnswer(opt.value)}
-                      className={`group relative w-full text-left p-4 md:p-5 rounded-xl border flex items-center gap-4 transition-all duration-300 ${
-                        isSelected 
-                          ? 'bg-blue-50 border-blue-500 shadow-sm' 
-                          : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 shadow-sm'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected ? 'bg-blue-500 text-white' : 'bg-zinc-100 text-zinc-500 group-hover:text-zinc-800 group-hover:bg-zinc-200'
-                      }`}>
-                         <span className="font-bold text-sm md:text-base">{opt.value}</span>
+            <h2 className="text-[28px] md:text-[38px] font-black tracking-tight mb-10 leading-snug text-zinc-900">
+              {q.text}
+            </h2>
+
+            <div className="flex flex-col gap-3">
+              {LIKERT_OPTIONS.map((opt) => {
+                const isSelected = answers[currentQ] === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleAnswer(opt.value)}
+                    className={`group relative w-full text-left p-4 md:p-5 rounded-[20px] border flex items-center gap-4 transition-all duration-300 ${
+                      isSelected
+                        ? 'bg-blue-50 border-blue-400 shadow-[0_16px_32px_rgba(59,130,246,0.12)]'
+                        : 'bg-white/86 border-white/90 hover:bg-zinc-50 hover:border-zinc-200 shadow-[0_6px_20px_rgba(15,23,42,0.04)]'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected ? 'bg-blue-500 text-white' : 'bg-zinc-100 text-zinc-500 group-hover:text-zinc-800 group-hover:bg-zinc-200'
+                    }`}>
+                       <span className="font-bold text-sm md:text-base">{opt.value}</span>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <div className={`font-bold text-base md:text-lg mb-1 ${isSelected ? 'text-blue-900' : 'text-zinc-700'}`}>
+                        {opt.label}
                       </div>
-                      <div className="flex-1 overflow-hidden">
-                        <div className={`font-bold text-base md:text-lg mb-1 ${isSelected ? 'text-blue-900' : 'text-zinc-700'}`}>
-                          {opt.label}
+                      {opt.sublabel(q) && (
+                        <div className={`text-sm truncate ${isSelected ? 'text-blue-700/90' : 'text-zinc-700'}`}>
+                          {opt.sublabel(q)}
                         </div>
-                        {opt.sublabel(q) && (
-                          <div className={`text-xs md:text-sm truncate ${isSelected ? 'text-blue-600/80' : 'text-zinc-500'}`}>
-                            {opt.sublabel(q)}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-           </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
-import { roomApi, scheduleApi } from '@/lib/api/client';
-import type { ScheduleOption, ScheduleSlot, TptiScores } from '@/lib/types';
-import { AXIS_LABELS, OPTION_LABELS } from '@/lib/utils/tpti';
+import { roomApi } from '@/lib/api/client';
+import type { ScheduleOption, ScheduleSlot } from '@/lib/types';
+import { OPTION_LABELS } from '@/lib/utils/tpti';
+import { formatTripDateRange } from '@/lib/utils/date';
 import { MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
 
 // Mock schedule data
@@ -66,14 +67,21 @@ const MOCK_OPTIONS: ScheduleOption[] = [
 ];
 
 function formatTime(iso: string) {
+  if (!iso) return '';
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function getProposalStepLabel(index: number) {
+  const labels = ['첫 코스', '두 번째 코스', '세 번째 코스', '네 번째 코스', '다섯 번째 코스'];
+  return labels[index] ?? `${index + 1}번째 코스`;
 }
 
 function SatisfactionBar({ score, nickname, color }: { score: number; nickname: string; color: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-zinc-600 w-12 shrink-0 font-bold truncate">
+      <span className="text-sm text-zinc-700 w-12 shrink-0 font-medium truncate">
         {nickname}
       </span>
       <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
@@ -102,13 +110,16 @@ export default function SchedulePage() {
   const [expandedOption, setExpandedOption] = useState<string | null>(null);
   const [loadingConfirm, setLoadingConfirm] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
+  const [customSlotDrafts, setCustomSlotDrafts] = useState<Record<string, { name: string; address: string; reason: string }>>({});
 
   async function handleGenerate() {
     setPhase('generating');
     try {
       const res = await roomApi.generateSchedule(roomId, {
         destination: currentRoom?.destination ?? '충남',
-        tripDate: currentRoom?.tripDate ?? '2026-05-02',
+        tripDate: currentRoom?.tripStartDate ?? currentRoom?.tripDate ?? '2026-05-02',
+        tripStartDate: currentRoom?.tripStartDate,
+        tripEndDate: currentRoom?.tripEndDate,
         startTime: '09:00',
         endTime: '21:00',
       });
@@ -145,40 +156,94 @@ export default function SchedulePage() {
     });
   }
 
+  function updateCustomSlotDraft(optionType: string, field: 'name' | 'address' | 'reason', value: string) {
+    setCustomSlotDrafts((prev) => ({
+      ...prev,
+      [optionType]: {
+        name: prev[optionType]?.name ?? '',
+        address: prev[optionType]?.address ?? '',
+        reason: prev[optionType]?.reason ?? '',
+        [field]: value,
+      },
+    }));
+  }
+
+  function addCustomSlot(optionType: string) {
+    const draft = customSlotDrafts[optionType];
+    if (!draft?.name.trim()) return;
+
+    setOptions((prev) =>
+      prev.map((option) => {
+        if (option.optionType !== optionType) return option;
+
+        const nextSlots = [...(option.slots ?? [])];
+        const newSlot: ScheduleSlot = {
+          orderIndex: nextSlots.length + 1,
+          startTime: '',
+          endTime: '',
+          slotType: 'common',
+          reasonAxis: 'common',
+          reason: draft.reason.trim() || '직접 추가한 코스',
+          place: {
+            id: Date.now(),
+            name: draft.name.trim(),
+            address: draft.address.trim() || '세부 장소는 추후 조정',
+            isDepopulationArea: false,
+          },
+        };
+
+        nextSlots.push(newSlot);
+        return {
+          ...option,
+          optionType: option.optionType,
+          slots: nextSlots,
+          summary: option.optionType === 'manual' ? draft.reason.trim() || option.summary : option.summary,
+        };
+      })
+    );
+
+    setCustomSlotDrafts((prev) => ({
+      ...prev,
+      [optionType]: { name: '', address: '', reason: '' },
+    }));
+  }
+
   // ── PHASE: generate ──────────────────────────────────────
   if (phase === 'generate') {
     return (
-      <div className="app-shell">
-        <header className="app-header py-4 px-6 flex justify-between items-center">
-          <button onClick={() => router.back()} className="hover:opacity-70 transition-opacity">
-            <iconify-icon icon="solar:round-alt-arrow-left-bold-duotone" width="28" className="text-zinc-700"></iconify-icon>
+      <div className="app-shell app-page">
+        <div className="app-topbar">
+          <button onClick={() => router.back()} className="app-icon-button" aria-label="이전으로">
+            <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
           </button>
-        </header>
+          <div className="min-w-0 flex-1 text-center">
+            <div className="app-topbar-title">AI 합의 일정</div>
+            <div className="app-topbar-meta">갈등 지도를 바탕으로 3가지 일정 옵션을 생성합니다</div>
+          </div>
+          <div className="w-11 shrink-0" />
+        </div>
 
-        <div className="app-content pt-12 flex flex-col justify-center min-h-[calc(100dvh-70px)] pb-24">
+        <div className="app-content pt-20 flex flex-col justify-center min-h-[calc(100dvh-70px)] pb-24">
           <div className="text-center mb-10">
             <div className="w-20 h-20 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 relative group">
               <div className="absolute inset-0 bg-blue-50 rounded-full blur-xl group-hover:bg-blue-100 transition-all" />
               <iconify-icon icon="solar:magic-stick-3-bold-duotone" width="40" className="text-blue-500 relative z-10"></iconify-icon>
             </div>
+            <span className="app-kicker mb-4">Consensus Engine</span>
             <h1 className="text-3xl font-extrabold tracking-tight mb-4 text-zinc-900">AI 일정 매직 셋업</h1>
-            <p className="text-zinc-500 text-sm md:text-base mb-2">동행자 전원의 갈등 요소를 완벽히 분석했습니다.</p>
-            <p className="text-emerald-600 font-medium text-sm">이제 서로 마음 상하지 않는 타협 일정을 제안해 드릴게요.</p>
+            <p className="text-zinc-700 text-sm md:text-base mb-2 font-normal">동행자 전원의 갈등 요소를 완벽히 분석했습니다.</p>
+            <p className="text-emerald-700 font-normal text-sm">이제 서로 마음 상하지 않는 타협 일정을 제안해 드릴게요.</p>
           </div>
 
-          <div className="card-glass bg-white border-zinc-200 p-6 mb-8 max-w-sm mx-auto w-full shadow-sm">
+          <div className="card-glass p-6 mb-8 max-w-sm mx-auto w-full">
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
-                <span className="text-xs font-bold text-zinc-500">여행지</span>
+                <span className="text-sm font-medium text-zinc-700">여행지</span>
                 <span className="text-sm font-bold text-zinc-900">{currentRoom?.destination ?? '충남 전역'}</span>
               </div>
               <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
-                <span className="text-xs font-bold text-zinc-500">일자</span>
-                <span className="text-sm font-bold text-zinc-900">{currentRoom?.tripDate ?? '날짜 미정'}</span>
-              </div>
-              <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
-                <span className="text-xs font-bold text-zinc-500">활동 시간</span>
-                <span className="text-sm font-bold text-zinc-900">09:00 — 21:00</span>
+                <span className="text-sm font-medium text-zinc-700">일자</span>
+                <span className="text-sm font-bold text-zinc-900">{formatTripDateRange(currentRoom?.tripStartDate, currentRoom?.tripEndDate, currentRoom?.tripDate)}</span>
               </div>
             </div>
           </div>
@@ -187,7 +252,10 @@ export default function SchedulePage() {
             <button className="btn-primary py-4 shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_50px_rgba(59,130,246,0.5)]" onClick={handleGenerate}>
               일정 생성 시작하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
             </button>
-            <button onClick={() => router.push(`/rooms/${roomId}/conflict`)} className="btn-secondary group">
+            <button
+              onClick={() => router.push(`/rooms/${roomId}/conflict`)}
+              className="w-full rounded-[18px] border border-zinc-300 bg-white text-zinc-700 text-sm font-medium py-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900"
+            >
               잠깐, 갈등 지도 다시 볼래요
             </button>
           </div>
@@ -199,26 +267,24 @@ export default function SchedulePage() {
   // ── PHASE: generating ───────────────────────────────────
   if (phase === 'generating') {
     return (
-      <div className="app-shell items-center justify-center">
+      <div className="app-shell app-page items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="w-16 h-16 rounded-full border-4 border-zinc-200 border-t-purple-500 animate-spin mb-8" />
-          <h2 className="text-2xl font-bold mb-8 tracking-tight text-zinc-900">수만 가지 조합을 계산 중...</h2>
+          <h2 className="text-2xl font-bold mb-8 tracking-tight text-zinc-900">수만 가지 조합을 계산 중…</h2>
 
-          <div className="w-full max-w-xs space-y-3 relative">
-            <div className="p-3 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-700 font-medium animate-pulse-soft flex gap-3 items-center shadow-sm">
+          <div className="w-full max-w-sm space-y-3">
+            <div className="p-4 bg-white border border-zinc-200 rounded-[20px] text-sm text-zinc-700 font-normal flex gap-3 items-center shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
               <iconify-icon icon="solar:round-transfer-diagonal-bold-duotone" className="text-blue-500 text-lg"></iconify-icon>
               서로의 취향 충돌 분해 중
             </div>
-            <div className="p-3 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-700 font-medium animate-pulse-soft delay-1 flex gap-3 items-center shadow-sm">
+            <div className="p-4 bg-white border border-zinc-200 rounded-[20px] text-sm text-zinc-700 font-normal flex gap-3 items-center shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
               <iconify-icon icon="solar:map-point-bold-duotone" className="text-emerald-500 text-lg"></iconify-icon>
               충남 최적의 장소 필터링
             </div>
-            <div className="p-3 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-700 font-medium animate-pulse-soft delay-2 flex gap-3 items-center shadow-sm">
+            <div className="p-4 bg-white border border-zinc-200 rounded-[20px] text-sm text-zinc-700 font-normal flex gap-3 items-center shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
               <iconify-icon icon="solar:history-line-duotone" className="text-purple-500 text-lg"></iconify-icon>
               공평한 시간 배분 타임라인 형성
             </div>
-            {/* Gradient mask for fade out effect */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent pointer-events-none" style={{ top: '50%' }} />
           </div>
         </div>
       </div>
@@ -228,19 +294,19 @@ export default function SchedulePage() {
   // ── PHASE: options ───────────────────────────────────────
   if (phase === 'options') {
     return (
-      <div className="app-shell">
-        <div className="app-header py-4 px-5 border-b border-zinc-200 flex items-center justify-between z-40 bg-white/80 backdrop-blur-xl">
-          <button onClick={() => setPhase('generate')} className="hover:text-zinc-500">
-            <iconify-icon icon="solar:round-alt-arrow-left-bold-duotone" width="28" className="text-zinc-600"></iconify-icon>
+      <div className="app-shell app-page">
+        <div className="app-topbar">
+          <button onClick={() => setPhase('generate')} className="app-icon-button" aria-label="이전으로">
+            <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-600"></iconify-icon>
           </button>
-          <div className="text-center">
-            <h1 className="font-bold text-base tracking-tight text-zinc-900">AI의 제안</h1>
-            <p className="text-[10px] font-medium text-emerald-600">가장 마음에 드는 1개를 골라주세요</p>
+          <div className="text-center flex-1">
+            <div className="app-topbar-title">TripSync의 제안</div>
+            <div className="app-topbar-meta">가장 마음에 드는 1개를 골라주세요</div>
           </div>
-          <div className="w-7" />
+          <div className="w-11" />
         </div>
 
-        <div className="app-content pt-6 pb-32 flex flex-col gap-5 relative">
+        <div className="app-content pt-10 pb-32 flex flex-col gap-5 relative">
           {options.map((opt, optIndex) => {
             const meta = OPTION_LABELS[opt.optionType];
             const isSelected = selectedOption?.optionType === opt.optionType;
@@ -250,7 +316,7 @@ export default function SchedulePage() {
             return (
               <div
                 key={opt.optionType}
-                className={`card-app transition-all duration-300 cursor-pointer overflow-hidden border-2 animate-fadeInUp shadow-sm hover:shadow-md ${isSelected ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)] bg-blue-50/50' : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                className={`card-app transition-all duration-300 cursor-pointer overflow-hidden border-2 animate-fadeInUp hover:shadow-md ${isSelected ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)] bg-blue-50/50' : 'hover:border-zinc-300 hover:bg-zinc-50'
                   }`}
                 style={{ animationDelay: `${optIndex * 0.15}s` }}
                 onClick={() => {
@@ -277,7 +343,7 @@ export default function SchedulePage() {
                     </div>
                   </div>
 
-                  <p className="text-zinc-600 text-sm font-medium leading-relaxed mb-5 ml-7">
+                  <p className="text-zinc-700 text-sm font-normal leading-relaxed mb-5 ml-7">
                     {opt.summary}
                   </p>
 
@@ -289,13 +355,13 @@ export default function SchedulePage() {
 
                   <div className="ml-7 mt-5">
                     <button
-                      className="text-xs font-bold text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
+                      className="text-sm font-normal text-zinc-700 hover:text-zinc-900 flex items-center gap-1 transition-colors"
                       onClick={(e) => { e.stopPropagation(); setExpandedOption(isExpanded ? null : opt.optionType); }}
                     >
                       {isExpanded ? (
-                        <><iconify-icon icon="solar:alt-arrow-up-linear"></iconify-icon> 상세 일정 접기</>
+                        <><iconify-icon icon="solar:alt-arrow-up-linear"></iconify-icon> 제안 구성 접기</>
                       ) : (
-                        <><iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon> 전체 타임라인 보기</>
+                        <><iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon> 제안 구성 보기</>
                       )}
                     </button>
                   </div>
@@ -303,62 +369,100 @@ export default function SchedulePage() {
 
                 {isExpanded && opt.slots && (
                   <div className="px-5 pb-5 border-t border-zinc-200 pt-5 ml-7">
-                    <div className="flex flex-col gap-4 relative">
-                      <div className="absolute top-4 bottom-4 left-[15px] w-px bg-zinc-200" />
-                      {opt.slots.map((slot) => {
+                    <div className="mb-4 rounded-[18px] bg-zinc-50 border border-zinc-200 px-4 py-3">
+                      <p className="text-sm font-normal text-zinc-700 leading-relaxed">
+                        이 옵션은 확정 일정이 아니라 제안안입니다. 세부 시간은 선택 후 조정되고, 아래는 어떤 흐름으로 구성되는지 보여주는 참고안입니다.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {opt.slots.map((slot, index) => {
                         const isPersonal = slot.slotType === 'personal';
                         const memberIdx = isPersonal ? opt.satisfactionByUser.findIndex((m) => m.userId === slot.targetUserId) : -1;
                         const accentColor = memberIdx >= 0 ? MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] : '#10B981';
 
                         return (
-                          <div key={slot.orderIndex} className="flex gap-4 relative">
-                            <div
-                              className="w-[30px] h-[30px] rounded-full flex items-center justify-center font-bold text-[10px] z-10 shrink-0 border"
-                              style={{ backgroundColor: `${accentColor}20`, borderColor: accentColor, color: accentColor }}
-                            >
-                              {slot.orderIndex}
-                            </div>
-                            <div className="flex-1 bg-white border border-zinc-200 rounded-xl p-3 shadow-sm">
-                              <div className="flex justify-between items-start mb-2">
-                                <div>
-                                  <p className="font-bold text-sm text-zinc-900">{slot.place.name}</p>
-                                  <p className="text-[10px] text-zinc-500 mt-0.5">{slot.place.address}</p>
-                                </div>
-                                {slot.place.isDepopulationArea && (
-                                  <span className="badge-green text-[9px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 whitespace-nowrap ml-2">
-                                    🌿 로컬 픽
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-2 mt-3">
-                                <span className="text-[10px] font-bold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded">
-                                  {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                          <div key={slot.orderIndex} className="bg-white border border-zinc-200 rounded-[20px] p-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span
+                                className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[12px] font-medium border"
+                                style={{ backgroundColor: `${accentColor}14`, borderColor: `${accentColor}45`, color: accentColor }}
+                              >
+                                {getProposalStepLabel(index)}
+                              </span>
+                              {slot.place.isDepopulationArea && (
+                                <span className="text-[12px] font-normal text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full bg-emerald-50">
+                                  로컬 픽
                                 </span>
-                                {isPersonal && slot.targetNickname && (
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border" style={{ borderColor: `${accentColor}40`, color: accentColor }}>
-                                    {slot.targetNickname} 취향 반영
-                                  </span>
-                                )}
-                                {!isPersonal && (
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 bg-emerald-50">
-                                    전원 공통 지대
-                                  </span>
-                                )}
-                              </div>
-
-                              {slot.reason && (
-                                <div className="mt-3 pt-2 border-t border-zinc-100">
-                                  <p className="text-[11px] text-zinc-500 flex items-start gap-1 w-full leading-snug">
-                                    <iconify-icon icon="solar:info-circle-line-duotone" className="shrink-0 mt-0.5 text-blue-500"></iconify-icon>
-                                    {slot.reason}
-                                  </p>
-                                </div>
                               )}
                             </div>
-                          </div>
+
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <p className="font-bold text-sm text-zinc-900">{slot.place.name}</p>
+                                <p className="text-sm text-zinc-700 mt-0.5">{slot.place.address}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
+                              {isPersonal && slot.targetNickname && (
+                                <span className="text-[12px] font-normal px-2 py-1 rounded-full border" style={{ borderColor: `${accentColor}40`, color: accentColor, backgroundColor: `${accentColor}10` }}>
+                                  {slot.targetNickname} 취향 반영
+                                </span>
+                              )}
+                              {!isPersonal && (
+                                <span className="text-[12px] font-normal px-2 py-1 rounded-full border border-emerald-200 text-emerald-700 bg-emerald-50">
+                                  전원 공통 지대
+                                </span>
+                              )}
+                            </div>
+
+                            {slot.reason && (
+                              <div className="mt-3 pt-3 border-t border-zinc-100">
+                                <p className="text-sm text-zinc-700 flex items-start gap-1.5 w-full leading-snug">
+                                  <iconify-icon icon="solar:info-circle-line-duotone" className="shrink-0 mt-0.5 text-blue-500"></iconify-icon>
+                                  {slot.reason}
+                                </p>
+                              </div>
+                            )}
+                            </div>
                         );
                       })}
+                    </div>
+                    <div className="mt-4 rounded-[20px] border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <iconify-icon icon="solar:add-circle-bold-duotone" width="18" className="text-orange-500"></iconify-icon>
+                        <p className="text-sm font-medium text-zinc-800">이 제안에 직접 코스 추가하기</p>
+                      </div>
+                      <div className="grid gap-3">
+                        <input
+                          className="input-field"
+                          placeholder="추가할 장소 또는 코스 이름"
+                          value={customSlotDrafts[opt.optionType]?.name ?? ''}
+                          onChange={(e) => updateCustomSlotDraft(opt.optionType, 'name', e.target.value)}
+                        />
+                        <input
+                          className="input-field"
+                          placeholder="주소 또는 지역 메모"
+                          value={customSlotDrafts[opt.optionType]?.address ?? ''}
+                          onChange={(e) => updateCustomSlotDraft(opt.optionType, 'address', e.target.value)}
+                        />
+                        <input
+                          className="input-field"
+                          placeholder="왜 추가하고 싶은지 간단한 메모"
+                          value={customSlotDrafts[opt.optionType]?.reason ?? ''}
+                          onChange={(e) => updateCustomSlotDraft(opt.optionType, 'reason', e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addCustomSlot(opt.optionType);
+                          }}
+                          className="w-full rounded-[16px] border border-zinc-300 bg-white text-zinc-700 text-sm font-medium py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
+                        >
+                          이 제안에 코스 추가
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -368,8 +472,8 @@ export default function SchedulePage() {
         </div>
 
         {/* Sticky Action Footer */}
-        <div className="fixed bottom-0 inset-x-0 p-6 bg-gradient-to-t from-white via-white to-transparent z-50 pointer-events-none">
-          <div className="max-w-md mx-auto pointer-events-auto">
+        <div className="app-sticky-cta pointer-events-none">
+          <div className="pointer-events-auto">
             <button
               className="btn-primary w-full py-4 text-base shadow-[0_0_40px_rgba(59,130,246,0.3)] transition-all data-[disabled=true]:shadow-none data-[disabled=true]:opacity-30"
               onClick={handleConfirm}
@@ -391,7 +495,21 @@ export default function SchedulePage() {
 
   // ── PHASE: confirmed ─────────────────────────────────────
   return (
-    <div className="app-shell">
+    <div className="app-shell app-page">
+      <div className="app-topbar">
+        <button onClick={() => setPhase('options')} className="app-icon-button" aria-label="옵션으로 돌아가기">
+          <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <div className="app-topbar-title">확정된 일정</div>
+          <div className="app-topbar-meta">동행자에게 공유할 최종 타임라인입니다</div>
+        </div>
+        <button onClick={copyShareLink} className="app-link-button px-3 py-2 text-sm" type="button">
+          <iconify-icon icon="solar:share-bold-duotone" width="18"></iconify-icon>
+          {copyDone ? '복사됨' : '공유'}
+        </button>
+      </div>
+
       <div className="app-content pt-10 min-h-[100dvh]">
         {/* Confirmed Hero */}
         <div className="text-center mb-10 pt-10 relative">
@@ -412,7 +530,7 @@ export default function SchedulePage() {
 
         <div className="flex flex-col gap-6">
           {/* Impact Metric */}
-          <div className="card-glass bg-white border-emerald-200 p-5 relative overflow-hidden group shadow-sm">
+          <div className="card-glass border-emerald-200 p-5 relative overflow-hidden group">
             <div className="absolute right-0 top-0 -mt-8 -mr-8 w-32 h-32 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-colors" />
             <h3 className="font-bold text-emerald-600 flex items-center gap-2 mb-2">
               <iconify-icon icon="solar:leaf-line-duotone" className="text-lg"></iconify-icon>
@@ -458,11 +576,13 @@ export default function SchedulePage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 mb-3">{slot.place.address}</p>
+                        <p className="text-sm text-zinc-700 mb-3">{slot.place.address}</p>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-zinc-500 tracking-wider">
-                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                          <span className="text-sm font-medium text-zinc-700 tracking-normal">
+                            {formatTime(slot.startTime) && formatTime(slot.endTime)
+                              ? `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`
+                              : '세부 시간 조정 예정'}
                           </span>
                         </div>
                       </div>
@@ -475,7 +595,7 @@ export default function SchedulePage() {
 
           <div className="flex flex-col gap-3 pb-8">
             <button className="btn-primary py-4 text-base" onClick={copyShareLink}>
-              {copyDone ? '✓ 링크가 클립보드에 복사되었습니다!' : '📤 동행자들에게 일정 공유하기'}
+              {copyDone ? '링크가 클립보드에 복사되었습니다!' : '동행자들에게 일정 공유하기'}
             </button>
             <button
               className="btn-secondary py-4 text-sm"

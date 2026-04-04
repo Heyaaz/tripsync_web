@@ -28,7 +28,8 @@ export default function TptiResultPage() {
   if (!tptiResult) return null;
 
   const { scores, characterName, characterEmoji } = tptiResult;
-  const gradientClass = GRADIENTS[Math.floor(Math.random() * GRADIENTS.length)];
+  const gradientSeed = scores.mobility + scores.photo + scores.budget + scores.theme;
+  const gradientClass = GRADIENTS[gradientSeed % GRADIENTS.length];
 
   const descriptions = Object.entries(AXIS_LABELS).map(([axis]) => {
     const score = scores[axis as keyof typeof scores];
@@ -38,11 +39,22 @@ export default function TptiResultPage() {
   });
 
   return (
-    <div className="app-shell">
-      <div className="app-content min-h-[100dvh] flex flex-col justify-center pt-8 pb-16 relative">
+    <div className="app-shell app-page">
+      <div className="app-topbar">
+        <button onClick={() => router.back()} className="app-icon-button" aria-label="이전으로">
+          <iconify-icon icon="solar:arrow-left-linear" width="22"></iconify-icon>
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <div className="app-topbar-title">TPTI 결과</div>
+          <div className="app-topbar-meta">나의 여행 취향 요약과 다음 액션을 확인합니다</div>
+        </div>
+        <div className="w-11 shrink-0" />
+      </div>
+
+      <div className="app-content min-h-[100dvh] flex flex-col justify-center pt-24 pb-16 relative">
         <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-blue-50 to-transparent pointer-events-none" />
-        
-        <div className="max-w-md mx-auto w-full relative z-10 space-y-6">
+
+        <div className="max-w-xl mx-auto w-full relative z-10 space-y-6">
           {/* Hero Result Card */}
           <div className="card-bezel animate-fadeInUp delay-1">
             <div className={`card-bezel-inner relative overflow-hidden bg-gradient-to-br ${gradientClass} p-10 flex flex-col items-center text-center`}>
@@ -56,7 +68,7 @@ export default function TptiResultPage() {
                 <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4 drop-shadow-lg">
                   {characterName}
                 </h1>
-                <p className="text-white/90 text-sm md:text-base font-medium max-w-[240px] leading-relaxed drop-shadow">
+                <p className="text-white/92 text-base font-normal max-w-[280px] leading-relaxed drop-shadow">
                   {descriptions.map((d) => d.type).join(' · ')}
                 </p>
               </div>
@@ -83,10 +95,10 @@ export default function TptiResultPage() {
                 <div key={d.axis} className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 border border-zinc-200">
                   <span className="text-sm font-bold text-zinc-700">{d.label}</span>
                   <div className="flex items-center gap-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${d.score >= 50 ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                      {d.type}
-                    </span>
-                    <span className="text-sm font-black text-zinc-500 w-8 text-right">{d.score}</span>
+                  <span className={`text-sm px-2.5 py-1 rounded-md font-medium ${d.score >= 50 ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {d.type}
+                  </span>
+                    <span className="text-sm font-semibold text-zinc-700 w-8 text-right">{d.score}</span>
                   </div>
                 </div>
               ))}
@@ -100,7 +112,7 @@ export default function TptiResultPage() {
                 className="btn-primary py-4 text-base"
                 onClick={() => router.push(`/rooms/${currentRoom.roomId}/conflict`)}
               >
-                그룹 트롤은 누구? 갈등 지도 보기 <iconify-icon icon="solar:arrow-right-linear" width="20"></iconify-icon>
+                그룹 갈등 지도 보기 <iconify-icon icon="solar:arrow-right-linear" width="20"></iconify-icon>
               </button>
             ) : (
               <>
@@ -131,7 +143,7 @@ export default function TptiResultPage() {
             
             <button
               onClick={() => router.push('/tpti')}
-              className="mt-4 text-sm text-zinc-700 font-bold max-w-[240px]"
+              className="mt-4 text-sm text-zinc-700 font-bold max-w-[240px] mx-auto"
             >
               검사 다시하기
             </button>

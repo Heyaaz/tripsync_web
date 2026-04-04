@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, roomApi } from '@/lib/api/client';
@@ -12,6 +12,7 @@ export default function RoomsNewPage() {
   const [step, setStep] = useState<'auth' | 'form'>(user ? 'form' : 'auth');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
+  const [oauthSyncing, setOauthSyncing] = useState(false);
   const [error, setError] = useState('');
 
   // Auth form
@@ -99,6 +100,56 @@ export default function RoomsNewPage() {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split('T')[0];
 
+  useEffect(() => {
+    setStep(user ? 'form' : 'auth');
+  }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncOAuthSession() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('login') !== 'success') {
+        return;
+      }
+
+      const oauthProvider = params.get('provider');
+      setOauthSyncing(true);
+      setError('');
+
+      try {
+        const res = await authApi.me();
+        const userData = res.data?.data?.user;
+
+        if (!cancelled && userData) {
+          setUser(userData);
+          setStep('form');
+          router.replace('/rooms/new');
+          return;
+        }
+
+        if (!cancelled) {
+          setError('소셜 로그인 세션을 확인하지 못했습니다. 다시 시도해주세요.');
+        }
+      } catch {
+        if (!cancelled) {
+          const providerLabel = oauthProvider === 'kakao' ? '카카오' : oauthProvider === 'google' ? 'Google' : '소셜';
+          setError(`${providerLabel} 로그인 세션을 확인하지 못했습니다. 다시 시도해주세요.`);
+        }
+      } finally {
+        if (!cancelled) {
+          setOauthSyncing(false);
+        }
+      }
+    }
+
+    void syncOAuthSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, setUser]);
+
   return (
     <div className="app-shell app-page">
       <div className="app-topbar">
@@ -166,8 +217,8 @@ export default function RoomsNewPage() {
             <div className="card-bezel-inner p-8 md:p-10">
               {step === 'auth' ? (
                 <div className="animate-fadeIn">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-6">
-                    <iconify-icon icon="solar:user-circle-bold-duotone" width="30" style={{ color: '#3B82F6' }}></iconify-icon>
+                  <div className="w-14 h-14 rounded-[18px] bg-blue-50 border border-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] flex items-center justify-center mb-6">
+                    <iconify-icon icon="solar:shield-user-bold-duotone" width="28" style={{ color: '#3B82F6' }}></iconify-icon>
                   </div>
                   <span className="app-kicker mb-4">
                     {authMode === 'login' ? 'Host Login' : 'Host Signup'}
@@ -222,18 +273,37 @@ export default function RoomsNewPage() {
                       </div>
                     )}
 
-                    <button className="btn-primary mt-2" type="submit" disabled={loading}>
+                    {oauthSyncing && (
+                      <div className="app-alert app-alert-warning">
+                        <iconify-icon icon="solar:shield-check-bold-duotone" width="20" className="shrink-0 mt-0.5"></iconify-icon>
+                        <p className="text-sm font-medium">소셜 로그인 세션을 확인하고 있습니다…</p>
+                      </div>
+                    )}
+
+                    <button className="btn-primary mt-2" type="submit" disabled={loading || oauthSyncing}>
                       {loading ? '처리 중…' : authMode === 'login' ? '로그인하고 계속하기' : '가입하고 계속하기'}
                     </button>
                   </form>
 
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-3">
                     <a
-                      href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/auth/google?redirectPath=/rooms/new`}
+                      href={authApi.getOAuthStartUrl('google', '/rooms/new')}
                       className="btn-secondary flex gap-3 w-full"
                     >
-                      <iconify-icon icon="logos:google-icon" width="20"></iconify-icon>
-                      Google로 시작하기
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                        <iconify-icon icon="logos:google-icon" width="20"></iconify-icon>
+                      </span>
+                      <span>Google로 시작하기</span>
+                    </a>
+
+                    <a
+                      href={authApi.getOAuthStartUrl('kakao', '/rooms/new')}
+                      className="btn-kakao"
+                    >
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                        <iconify-icon icon="solar:chat-round-bold" width="19" style={{ color: '#191600' }}></iconify-icon>
+                      </span>
+                      <span>카카오로 시작하기</span>
                     </a>
                   </div>
 

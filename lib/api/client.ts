@@ -28,6 +28,9 @@ export const authApi = {
 
   guest: (data: { nickname: string; shareCode?: string }) =>
     apiClient.post('/auth/guest', data),
+
+  getOAuthStartUrl: (provider: 'google' | 'kakao', redirectPath = '/rooms/new') =>
+    `/api/auth/${provider}?redirectPath=${encodeURIComponent(redirectPath)}`,
 };
 
 // ─── TPTI API ─────────────────────────────────────────────

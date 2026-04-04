@@ -7,7 +7,7 @@ export interface User {
   nickname: string;
   email?: string;
   isGuest: boolean;
-  authProvider: 'local' | 'google' | 'guest';
+  authProvider: 'local' | 'google' | 'kakao' | 'guest';
   profileImageUrl?: string;
 }
 

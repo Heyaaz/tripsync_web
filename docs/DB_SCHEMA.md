@@ -57,7 +57,7 @@ trip_rooms
 ### 4.1 `users`
 
 역할:
-- 방장 OAuth 계정 저장
+- 방장 Google/로컬 계정 저장
 - 게스트 세션용 임시 사용자 저장
 
 ```sql
@@ -65,7 +65,8 @@ CREATE TABLE users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   nickname VARCHAR(50) NOT NULL,
   email VARCHAR(255) NULL,
-  auth_provider ENUM('kakao', 'google', 'guest') NOT NULL,
+  auth_provider ENUM('google', 'local', 'guest') NOT NULL,
+  password_hash VARCHAR(255) NULL,
   provider_user_id VARCHAR(100) NULL,
   profile_image_url TEXT NULL,
   admin_yn CHAR(1) NOT NULL DEFAULT 'N',
@@ -81,8 +82,9 @@ CREATE TABLE users (
 
 제약:
 - `auth_provider='guest'`인 경우 `provider_user_id`는 NULL 허용
-- `auth_provider in ('kakao','google')`인 경우 `provider_user_id`는 필수
-- 이메일은 공급자 미제공 가능성을 고려해 unique 제약 대신 일반 index만 사용
+- `auth_provider='google'`인 경우 `provider_user_id`는 필수
+- `auth_provider='local'`인 경우 `provider_user_id=email`, `password_hash`는 필수
+- 이메일은 보조 식별자이며 cross-provider unique 제약 없이 일반 index만 사용
 - `admin_yn` 기본값은 `N`
 - 소프트 삭제 시 `del_yn='Y'`
 
@@ -439,7 +441,7 @@ CREATE TABLE satisfaction_scores (
 
 | 패턴 | 주요 인덱스 |
 |---|---|
-| OAuth 사용자 조회 | `uq_users_provider(auth_provider, provider_user_id)` |
+| OAuth/로컬 사용자 조회 | `uq_users_provider(auth_provider, provider_user_id)` / `idx_users_email(email)` |
 | 활성 사용자 조회 | `idx_users_del_yn(del_yn)` |
 | 공유 코드 진입 | `uq_trip_rooms_share_code(share_code)` |
 | 방 멤버 조회 | `uq_room_members_room_user(room_id, user_id)` |
@@ -549,7 +551,7 @@ purge 역순:
 ## 10. 미결 사항
 
 1. `places`에 권역(cluster) 컬럼을 추가할지 여부
-2. `users.email`의 중복 허용 정책 세부화
+2. soft delete 이후 로컬 계정 이메일 재사용 정책 검증
 3. 일정/갈등 지도 이력 보존 개수 제한 여부
 4. 개인정보 삭제 요청 처리 정책(Phase 2)
 5. soft-deleted row의 unique key 재사용 정책

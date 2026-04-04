@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import ScheduleMapModalView from '@/components/schedule/ScheduleMapModalView';
 import { useAuthStore } from '@/lib/store/auth';
 import { roomApi } from '@/lib/api/client';
 import type { ScheduleOption, ScheduleSlot } from '@/lib/types';
@@ -22,11 +23,11 @@ const MOCK_OPTIONS: ScheduleOption[] = [
       { userId: 3, nickname: '준호', score: 71 },
     ],
     slots: [
-      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T11:30:00+09:00', slotType: 'personal', targetUserId: 1, targetNickname: '방장(나)', reasonAxis: 'mobility', reason: '활동성 높은 취향 반영', place: { id: 1, name: '공주 공산성', address: '충남 공주시 웅진로 280', isDepopulationArea: false, imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', description: '백제 웅진 도읍기의 웅장한 왕성으로, 아름다운 성곽길을 따라 걸으며 금강의 경치와 역사의 숨결을 동시에 느낄 수 있는 대표적인 명소입니다.' } },
-      { orderIndex: 2, startTime: '2026-05-02T11:30:00+09:00', endTime: '2026-05-02T13:00:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '공통 지대(식도락) 반영', place: { id: 2, name: '공주 한옥마을 맛집거리', address: '충남 공주시 반죽동', isDepopulationArea: false, description: '고즈넉한 한옥의 정취를 느끼며 공주의 특색 있는 로컬 식도락을 즐길 수 있는 거리입니다.' } },
-      { orderIndex: 3, startTime: '2026-05-02T13:00:00+09:00', endTime: '2026-05-02T15:30:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'photo', reason: '사진 촬영 취향 존중', place: { id: 3, name: '부여 궁남지', address: '충남 부여군 부여읍 궁남로 52', isDepopulationArea: true, imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400', description: '우리나라 최초의 인공 정원으로, 백제 무왕의 서동요 전설이 깃든 아름다운 연못에서 수많은 연꽃과 수양버들을 배경으로 인생샷을 남겨보세요.' } },
-      { orderIndex: 4, startTime: '2026-05-02T15:30:00+09:00', endTime: '2026-05-02T17:30:00+09:00', slotType: 'personal', targetUserId: 3, targetNickname: '준호', reasonAxis: 'theme', reason: '자연 힐링 테마 반영', place: { id: 4, name: '부여 백마강 황포돛배', address: '충남 부여군 부여읍 나루터로 50', isDepopulationArea: true, description: '백제 사람들의 교통수단이었던 황포돛배를 타고 백마강을 유람하며, 수려한 낙화암 일대 자연 경관 속에서 진정한 힐링을 경험할 수 있습니다.' } },
-      { orderIndex: 5, startTime: '2026-05-02T17:30:00+09:00', endTime: '2026-05-02T19:30:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '공통 관심사(역사) 반영', place: { id: 5, name: '부여 정림사지', address: '충남 부여군 부여읍 정림로 83', isDepopulationArea: true, description: '유네스코 세계문화유산인 정림사지에서 우아하고 장중한 백제의 석탑 건축 양식을 탐방합니다.' } },
+      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T11:30:00+09:00', slotType: 'personal', targetUserId: 1, targetNickname: '방장(나)', reasonAxis: 'mobility', reason: '활동성 높은 취향 반영', place: { id: 1, name: '공주 공산성', address: '충남 공주시 웅진로 280', isDepopulationArea: false, latitude: 36.4626, longitude: 127.1194, imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', description: '백제 웅진 도읍기의 웅장한 왕성으로, 아름다운 성곽길을 따라 걸으며 금강의 경치와 역사의 숨결을 동시에 느낄 수 있는 대표적인 명소입니다.' } },
+      { orderIndex: 2, startTime: '2026-05-02T11:30:00+09:00', endTime: '2026-05-02T13:00:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '공통 지대(식도락) 반영', place: { id: 2, name: '공주 한옥마을 맛집거리', address: '충남 공주시 반죽동', isDepopulationArea: false, latitude: 36.4554, longitude: 127.1248, description: '고즈넉한 한옥의 정취를 느끼며 공주의 특색 있는 로컬 식도락을 즐길 수 있는 거리입니다.' } },
+      { orderIndex: 3, startTime: '2026-05-02T13:00:00+09:00', endTime: '2026-05-02T15:30:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'photo', reason: '사진 촬영 취향 존중', place: { id: 3, name: '부여 궁남지', address: '충남 부여군 부여읍 궁남로 52', isDepopulationArea: true, latitude: 36.2758, longitude: 126.9124, imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400', description: '우리나라 최초의 인공 정원으로, 백제 무왕의 서동요 전설이 깃든 아름다운 연못에서 수많은 연꽃과 수양버들을 배경으로 인생샷을 남겨보세요.' } },
+      { orderIndex: 4, startTime: '2026-05-02T15:30:00+09:00', endTime: '2026-05-02T17:30:00+09:00', slotType: 'personal', targetUserId: 3, targetNickname: '준호', reasonAxis: 'theme', reason: '자연 힐링 테마 반영', place: { id: 4, name: '부여 백마강 황포돛배', address: '충남 부여군 부여읍 나루터로 50', isDepopulationArea: true, latitude: 36.2794, longitude: 126.9093, description: '백제 사람들의 교통수단이었던 황포돛배를 타고 백마강을 유람하며, 수려한 낙화암 일대 자연 경관 속에서 진정한 힐링을 경험할 수 있습니다.' } },
+      { orderIndex: 5, startTime: '2026-05-02T17:30:00+09:00', endTime: '2026-05-02T19:30:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '공통 관심사(역사) 반영', place: { id: 5, name: '부여 정림사지', address: '충남 부여군 부여읍 정림로 83', isDepopulationArea: true, latitude: 36.2818, longitude: 126.9149, description: '유네스코 세계문화유산인 정림사지에서 우아하고 장중한 백제의 석탑 건축 양식을 탐방합니다.' } },
     ],
   },
   {
@@ -40,10 +41,10 @@ const MOCK_OPTIONS: ScheduleOption[] = [
       { userId: 3, nickname: '준호', score: 61 },
     ],
     slots: [
-      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T12:00:00+09:00', slotType: 'personal', targetUserId: 1, targetNickname: '방장(나)', reasonAxis: 'mobility', reason: '극소수파 뚜벅이 코스', place: { id: 6, name: '계룡산 국립공원 ท레킹', address: '충남 공주시 반포면 계룡산로 805-246', isDepopulationArea: false, description: '충남 제1의 명산인 계룡산에서 맑은 공기와 수려한 산세를 만끽할 수 있는 트레킹 코스입니다.' } },
-      { orderIndex: 2, startTime: '2026-05-02T12:00:00+09:00', endTime: '2026-05-02T14:00:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'budget', reason: '하이엔드 파인다이닝', place: { id: 7, name: '공주 유구 명품 한정식', address: '충남 공주시 유구읍', isDepopulationArea: true, description: '제철 식재료를 활용해 정성껏 준비된 최고급 한정식을 맛보며 미식의 진수를 경험해 보세요.' } },
-      { orderIndex: 3, startTime: '2026-05-02T14:00:00+09:00', endTime: '2026-05-02T16:30:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'photo', reason: 'SNS 핫스팟 인증샷', place: { id: 8, name: '태안 꽃지해수욕장', address: '충남 태안군 안면읍 꽃지해안로 400', isDepopulationArea: true, imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400', description: '할미바위와 할아비바위 뒤로 붉게 물드는 환상적인 저녁 노을을 배경으로 최고의 인생샷을 남길 수 있는 아름다운 해변입니다.' } },
-      { orderIndex: 4, startTime: '2026-05-02T16:30:00+09:00', endTime: '2026-05-02T19:00:00+09:00', slotType: 'personal', targetUserId: 3, targetNickname: '준호', reasonAxis: 'theme', reason: '조용한 휴식', place: { id: 9, name: '태안 안면도 자연휴양림', address: '충남 태안군 안면읍 안면대로 1660-24', isDepopulationArea: true, description: '초록빛 안면송 벌판 속에서 조용한 여유를 즐기며 피톤치드를 한가득 마실 수 있는 매력적인 산책로입니다.' } },
+      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T12:00:00+09:00', slotType: 'personal', targetUserId: 1, targetNickname: '방장(나)', reasonAxis: 'mobility', reason: '극소수파 뚜벅이 코스', place: { id: 6, name: '계룡산 국립공원 ท레킹', address: '충남 공주시 반포면 계룡산로 805-246', isDepopulationArea: false, latitude: 36.3495, longitude: 127.2292, description: '충남 제1의 명산인 계룡산에서 맑은 공기와 수려한 산세를 만끽할 수 있는 트레킹 코스입니다.' } },
+      { orderIndex: 2, startTime: '2026-05-02T12:00:00+09:00', endTime: '2026-05-02T14:00:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'budget', reason: '하이엔드 파인다이닝', place: { id: 7, name: '공주 유구 명품 한정식', address: '충남 공주시 유구읍', isDepopulationArea: true, latitude: 36.5484, longitude: 126.9478, description: '제철 식재료를 활용해 정성껏 준비된 최고급 한정식을 맛보며 미식의 진수를 경험해 보세요.' } },
+      { orderIndex: 3, startTime: '2026-05-02T14:00:00+09:00', endTime: '2026-05-02T16:30:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'photo', reason: 'SNS 핫스팟 인증샷', place: { id: 8, name: '태안 꽃지해수욕장', address: '충남 태안군 안면읍 꽃지해안로 400', isDepopulationArea: true, latitude: 36.5035, longitude: 126.3381, imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400', description: '할미바위와 할아비바위 뒤로 붉게 물드는 환상적인 저녁 노을을 배경으로 최고의 인생샷을 남길 수 있는 아름다운 해변입니다.' } },
+      { orderIndex: 4, startTime: '2026-05-02T16:30:00+09:00', endTime: '2026-05-02T19:00:00+09:00', slotType: 'personal', targetUserId: 3, targetNickname: '준호', reasonAxis: 'theme', reason: '조용한 휴식', place: { id: 9, name: '태안 안면도 자연휴양림', address: '충남 태안군 안면읍 안면대로 1660-24', isDepopulationArea: true, latitude: 36.5163, longitude: 126.3467, description: '초록빛 안면송 벌판 속에서 조용한 여유를 즐기며 피톤치드를 한가득 마실 수 있는 매력적인 산책로입니다.' } },
     ],
   },
   {
@@ -57,11 +58,11 @@ const MOCK_OPTIONS: ScheduleOption[] = [
       { userId: 3, nickname: '준호', score: 71 },
     ],
     slots: [
-      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T11:00:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '인구감소지역 생태 체험', place: { id: 10, name: '서천 국립생태원', address: '충남 서천군 마서면 금강로 1210', isDepopulationArea: true, description: '전 세계의 다양한 기후대 생태계를 한곳에서 체험하며 살아있는 생물자원의 중요성을 일깨울 수 있는 종합 생태 박물관입니다.' } },
-      { orderIndex: 2, startTime: '2026-05-02T11:00:00+09:00', endTime: '2026-05-02T13:00:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '로컬 재료 로컬 푸드', place: { id: 11, name: '서천 장항 로컬 라이프스타일 샵', address: '충남 서천군 장항읍', isDepopulationArea: true, description: '장항읍 고유의 해산물과 로컬 재료로 만든 다채로운 푸드와 독창적인 소품들을 만나볼 수 있는 복합 생활 공간입니다.' } },
-      { orderIndex: 3, startTime: '2026-05-02T13:00:00+09:00', endTime: '2026-05-02T15:30:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '이국적인 서해바다', place: { id: 12, name: '보령 대천해수욕장', address: '충남 보령시 신흑동 대천해수욕장로 97', isDepopulationArea: true, imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400', description: '황금빛 백사장이 넓게 펼쳐진 서해안 최고의 휴양지에서 산책과 해양 레포츠를 즐기며 에너지를 충전하세요.' } },
-      { orderIndex: 4, startTime: '2026-05-02T15:30:00+09:00', endTime: '2026-05-02T17:30:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '인구감소지역 재생 공간', place: { id: 13, name: '보령 성주산 자연휴양림', address: '충남 보령시 성주면 성주산로 673', isDepopulationArea: true, description: '울창한 편백나무 숲과 맑은 계곡물이 어우러져 깊은 산림욕과 더불어 심신을 편하게 쉴 수 있는 힐링 스팟입니다.' } },
-      { orderIndex: 5, startTime: '2026-05-02T17:30:00+09:00', endTime: '2026-05-02T19:30:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '로컬 야경', place: { id: 14, name: '보령 오천항 일몰 투어', address: '충남 보령시 오천면 오천항리', isDepopulationArea: true, description: '오천항의 고즈넉한 항구 풍경과 함께, 잔잔한 서해로 붉게 떨어지는 일몰을 감상하며 하루를 낭만적으로 마무리해보세요.' } },
+      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T11:00:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '인구감소지역 생태 체험', place: { id: 10, name: '서천 국립생태원', address: '충남 서천군 마서면 금강로 1210', isDepopulationArea: true, latitude: 36.0192, longitude: 126.7424, description: '전 세계의 다양한 기후대 생태계를 한곳에서 체험하며 살아있는 생물자원의 중요성을 일깨울 수 있는 종합 생태 박물관입니다.' } },
+      { orderIndex: 2, startTime: '2026-05-02T11:00:00+09:00', endTime: '2026-05-02T13:00:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '로컬 재료 로컬 푸드', place: { id: 11, name: '서천 장항 로컬 라이프스타일 샵', address: '충남 서천군 장항읍', isDepopulationArea: true, latitude: 36.0112, longitude: 126.6937, description: '장항읍 고유의 해산물과 로컬 재료로 만든 다채로운 푸드와 독창적인 소품들을 만나볼 수 있는 복합 생활 공간입니다.' } },
+      { orderIndex: 3, startTime: '2026-05-02T13:00:00+09:00', endTime: '2026-05-02T15:30:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '이국적인 서해바다', place: { id: 12, name: '보령 대천해수욕장', address: '충남 보령시 신흑동 대천해수욕장로 97', isDepopulationArea: true, latitude: 36.3051, longitude: 126.5118, imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400', description: '황금빛 백사장이 넓게 펼쳐진 서해안 최고의 휴양지에서 산책과 해양 레포츠를 즐기며 에너지를 충전하세요.' } },
+      { orderIndex: 4, startTime: '2026-05-02T15:30:00+09:00', endTime: '2026-05-02T17:30:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '인구감소지역 재생 공간', place: { id: 13, name: '보령 성주산 자연휴양림', address: '충남 보령시 성주면 성주산로 673', isDepopulationArea: true, latitude: 36.3447, longitude: 126.6688, description: '울창한 편백나무 숲과 맑은 계곡물이 어우러져 깊은 산림욕과 더불어 심신을 편하게 쉴 수 있는 힐링 스팟입니다.' } },
+      { orderIndex: 5, startTime: '2026-05-02T17:30:00+09:00', endTime: '2026-05-02T19:30:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '로컬 야경', place: { id: 14, name: '보령 오천항 일몰 투어', address: '충남 보령시 오천면 오천항리', isDepopulationArea: true, latitude: 36.4345, longitude: 126.4764, description: '오천항의 고즈넉한 항구 풍경과 함께, 잔잔한 서해로 붉게 떨어지는 일몰을 감상하며 하루를 낭만적으로 마무리해보세요.' } },
     ],
   },
 ];
@@ -97,6 +98,15 @@ function SatisfactionBar({ score, nickname, color }: { score: number; nickname: 
   );
 }
 
+type DetailModalState = {
+  slot: ScheduleSlot;
+  accentColor: string;
+  isLocal: boolean;
+  scheduleTitle: string;
+  scheduleSummary: string;
+  scheduleSlots: ScheduleSlot[];
+};
+
 export default function SchedulePage() {
   const params = useParams();
   const router = useRouter();
@@ -111,7 +121,7 @@ export default function SchedulePage() {
   const [loadingConfirm, setLoadingConfirm] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
   const [customSlotDrafts, setCustomSlotDrafts] = useState<Record<string, { name: string; address: string; reason: string }>>({});
-  const [detailModalSlot, setDetailModalSlot] = useState<{slot: ScheduleSlot, accentColor: string, isLocal: boolean} | null>(null);
+  const [detailModalSlot, setDetailModalSlot] = useState<DetailModalState | null>(null);
   const [modalView, setModalView] = useState<'detail' | 'map'>('detail');
 
   async function handleGenerate() {
@@ -208,6 +218,45 @@ export default function SchedulePage() {
       ...prev,
       [optionType]: { name: '', address: '', reason: '' },
     }));
+  }
+
+  function openDetailModal({
+    slot,
+    accentColor,
+    scheduleTitle,
+    scheduleSummary,
+    scheduleSlots,
+  }: {
+    slot: ScheduleSlot;
+    accentColor: string;
+    scheduleTitle: string;
+    scheduleSummary: string;
+    scheduleSlots: ScheduleSlot[];
+  }) {
+    setDetailModalSlot({
+      slot,
+      accentColor,
+      isLocal: !!slot.place.isDepopulationArea,
+      scheduleTitle,
+      scheduleSummary,
+      scheduleSlots,
+    });
+    setModalView('detail');
+  }
+
+  function openScheduleMap(option: ScheduleOption, scheduleTitle: string) {
+    const firstSlot = option.slots?.[0];
+    if (!firstSlot || !option.slots) return;
+
+    setDetailModalSlot({
+      slot: firstSlot,
+      accentColor: '#2563EB',
+      isLocal: !!firstSlot.place.isDepopulationArea,
+      scheduleTitle,
+      scheduleSummary: option.summary,
+      scheduleSlots: option.slots,
+    });
+    setModalView('map');
   }
 
   // ── PHASE: generate ──────────────────────────────────────
@@ -394,8 +443,13 @@ export default function SchedulePage() {
                             className="bg-white border border-zinc-200 rounded-[20px] p-4 shadow-sm transition-all cursor-pointer hover:border-zinc-300 hover:shadow-md"
                             onClick={(e) => { 
                               e.stopPropagation(); 
-                              setDetailModalSlot({ slot, accentColor, isLocal: !!slot.place.isDepopulationArea }); 
-                              setModalView('detail');
+                              openDetailModal({
+                                slot,
+                                accentColor,
+                                scheduleTitle: meta.label,
+                                scheduleSummary: opt.summary,
+                                scheduleSlots: opt.slots ?? [],
+                              });
                             }}
                           >
                             <div className="flex justify-between items-start mb-3">
@@ -584,51 +638,29 @@ export default function SchedulePage() {
                         onClick={() => setModalView('map')}
                         className="flex-none px-4 py-3.5 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <iconify-icon icon="solar:map-point-wave-bold-duotone" width="16"></iconify-icon>지도 보기
+                        <iconify-icon icon="solar:map-point-wave-bold-duotone" width="16"></iconify-icon>일정 지도 보기
                       </button>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col h-[480px]">
+                <div className="flex flex-col h-[560px]">
                   <div className="p-4 border-b border-zinc-100 flex items-center gap-3 bg-white relative z-10">
                     <button onClick={() => setModalView('detail')} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-100 text-zinc-600 transition-colors">
                       <iconify-icon icon="solar:arrow-left-linear" width="20"></iconify-icon>
                     </button>
                     <div className="flex-1 overflow-hidden pr-8">
-                      <h3 className="text-base font-bold text-zinc-900 truncate">{detailModalSlot.slot.place.name}</h3>
-                      <p className="text-xs text-zinc-500 truncate">{detailModalSlot.slot.place.address}</p>
+                      <h3 className="text-base font-bold text-zinc-900 truncate">{detailModalSlot.scheduleTitle}</h3>
+                      <p className="text-xs text-zinc-500 truncate">{detailModalSlot.scheduleSummary}</p>
                     </div>
                   </div>
                   <div className="flex-1 bg-zinc-100 relative">
-                    <iframe
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      loading="lazy"
-                      allowFullScreen
-                      referrerPolicy="no-referrer-when-downgrade"
-                      src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY_MOCK || 'NOT_AVAILABLE'}&q=${encodeURIComponent(detailModalSlot.slot.place.address)}`}
-                    ></iframe>
-                    {/* Fallback overlay when no API key is provided for Google Maps */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-100/95 backdrop-blur-sm pointer-events-none p-6 text-center z-10">
-                      <div className="bg-white p-6 rounded-2xl shadow-xl border border-zinc-200 pointer-events-auto flex flex-col items-center">
-                        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                          <iconify-icon icon="solar:map-point-wave-bold-duotone" width="24" className="text-blue-500"></iconify-icon>
-                        </div>
-                        <h4 className="text-[15px] font-bold text-zinc-900 mb-1.5">{detailModalSlot.slot.place.name}</h4>
-                        <p className="text-xs text-zinc-500 mb-5 break-keep-all">{detailModalSlot.slot.place.address}</p>
-                        <a 
-                          href={`https://map.kakao.com/link/search/${encodeURIComponent(detailModalSlot.slot.place.name + ' ' + detailModalSlot.slot.place.address)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FEE500] text-[#000000] text-[13px] font-bold rounded-xl shadow-sm hover:brightness-95 transition-all"
-                        >
-                          카카오맵으로 열람하기
-                          <iconify-icon icon="solar:alt-arrow-right-linear" width="14"></iconify-icon>
-                        </a>
-                      </div>
-                    </div>
+                    <ScheduleMapModalView
+                      slots={detailModalSlot.scheduleSlots}
+                      initialOrderIndex={detailModalSlot.slot.orderIndex}
+                      scheduleTitle={detailModalSlot.scheduleTitle}
+                      scheduleSummary={detailModalSlot.scheduleSummary}
+                    />
                   </div>
                 </div>
               )}
@@ -692,10 +724,20 @@ export default function SchedulePage() {
           {/* Confirmed Schedule List */}
           {confirmedOption?.slots && (
             <div className="card-app p-5 text-left mb-6">
-              <h3 className="font-bold flex items-center gap-2 mb-6 text-base border-b border-zinc-200 pb-4 text-zinc-900">
-                <iconify-icon icon="solar:calendar-date-line-duotone" className="text-xl text-blue-500"></iconify-icon>
-                확정된 타임라인
-              </h3>
+              <div className="mb-6 flex items-center justify-between gap-3 border-b border-zinc-200 pb-4">
+                <h3 className="font-bold flex items-center gap-2 text-base text-zinc-900">
+                  <iconify-icon icon="solar:calendar-date-line-duotone" className="text-xl text-blue-500"></iconify-icon>
+                  확정된 타임라인
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => openScheduleMap(confirmedOption, '확정 일정')}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[13px] font-semibold text-blue-700 transition hover:bg-blue-100"
+                >
+                  <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
+                  전체 지도 보기
+                </button>
+              </div>
               <div className="flex flex-col gap-6">
                 {confirmedOption.slots.map((slot) => {
                   const isPersonal = slot.slotType === 'personal';
@@ -703,7 +745,18 @@ export default function SchedulePage() {
                   const accentColor = memberIdx >= 0 ? MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] : '#10B981';
 
                   return (
-                    <div key={slot.orderIndex} className="flex gap-4 group">
+                    <button
+                      key={slot.orderIndex}
+                      type="button"
+                      className="flex w-full gap-4 group rounded-[22px] border border-transparent px-1 py-1 text-left transition hover:border-zinc-200 hover:bg-zinc-50"
+                      onClick={() => openDetailModal({
+                        slot,
+                        accentColor,
+                        scheduleTitle: '확정 일정',
+                        scheduleSummary: confirmedOption.summary,
+                        scheduleSlots: confirmedOption.slots ?? [],
+                      })}
+                    >
                       <div className="flex flex-col items-center">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-zinc-200 bg-white group-hover:scale-110 transition-transform shadow-sm"
@@ -732,7 +785,7 @@ export default function SchedulePage() {
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

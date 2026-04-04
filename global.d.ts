@@ -12,3 +12,13 @@ declare module 'react' {
     }
   }
 }
+
+declare global {
+  interface Window {
+    kakao?: {
+      maps?: {
+        load?: (callback: () => void) => void;
+      };
+    } & Record<string, unknown>;
+  }
+}

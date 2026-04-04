@@ -51,6 +51,32 @@ const MOCK_MEMBERS: RoomMember[] = [
   { userId: 3, nickname: '준호', role: 'member', tptiCompleted: true, scores: { mobility: 55, photo: 40, budget: 45, theme: 30 }, characterName: '자연 탐방가' },
 ];
 
+function getMemberRenderKey(member: Pick<RoomMember, 'userId' | 'nickname' | 'role'>, index: number) {
+  return `${member.userId}-${member.nickname}-${member.role}-${index}`;
+}
+
+function buildDemoMembers(user?: { id: number; nickname: string }, tptiResult?: { scores: TptiScores; characterName: string }) {
+  const hostId = user?.id ?? MOCK_MEMBERS[0].userId;
+  const hostNickname = user?.nickname ?? MOCK_MEMBERS[0].nickname;
+
+  const otherMembers = MOCK_MEMBERS.slice(1).map((member, index) => ({
+    ...member,
+    userId: member.userId === hostId ? 1000 + index : member.userId,
+  }));
+
+  return [
+    {
+      userId: hostId,
+      nickname: hostNickname,
+      role: 'host' as const,
+      tptiCompleted: true,
+      scores: tptiResult?.scores ?? MOCK_MEMBERS[0].scores,
+      characterName: tptiResult?.characterName ?? MOCK_MEMBERS[0].characterName,
+    },
+    ...otherMembers,
+  ];
+}
+
 export default function ConflictPage() {
   const params = useParams();
   const router = useRouter();
@@ -73,17 +99,7 @@ export default function ConflictPage() {
       setConflictMap(conflictRes.data?.data ?? null);
     } catch {
       // Demo fallback
-      const mems = [...MOCK_MEMBERS];
-      if (tptiResult && user) {
-        mems[0] = {
-          userId: user.id,
-          nickname: user.nickname,
-          role: 'host',
-          tptiCompleted: true,
-          scores: tptiResult.scores,
-          characterName: tptiResult.characterName,
-        };
-      }
+      const mems = buildDemoMembers(user ?? undefined, tptiResult ?? undefined);
       setMembers(mems);
       setConflictMap(makeMockConflict(mems));
     } finally {
@@ -158,7 +174,7 @@ export default function ConflictPage() {
             {members.map((m, i) => {
               const color = MEMBER_COLORS[i % MEMBER_COLORS.length];
               return (
-                <div key={m.userId} className="flex items-center gap-4 p-4 md:p-5 bg-white border border-zinc-100 rounded-[24px] shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-colors">
+                <div key={getMemberRenderKey(m, i)} className="flex items-center gap-4 p-4 md:p-5 bg-white border border-zinc-100 rounded-[24px] shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-colors">
                   <div 
                     className="w-12 h-12 rounded-full flex items-center justify-center font-black text-base shrink-0 border-2"
                     style={{ backgroundColor: `${color}18`, color: color, borderColor: `${color}55` }}
@@ -204,8 +220,8 @@ export default function ConflictPage() {
             <p className="text-sm text-zinc-700 font-normal mb-5">그래프가 겹칠수록 해당 축의 취향이 비슷합니다.</p>
 
             <div className="flex flex-wrap gap-3 mb-5">
-              {chartData.map((m) => (
-                <div key={m.userId} className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-zinc-100 shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
+              {chartData.map((m, index) => (
+                <div key={`${m.userId}-${m.nickname}-${index}`} className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-zinc-100 shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
                   <div className="w-3 h-3 rounded-full" style={{ background: m.color }} />
                   <span className="text-xs font-bold text-zinc-700">{m.nickname}</span>
                 </div>
@@ -251,8 +267,8 @@ export default function ConflictPage() {
                     </div>
 
                     <div className="space-y-3.5">
-                      {ca.members.map((mem) => (
-                        <div key={mem.userId} className="flex items-center gap-3">
+                      {ca.members.map((mem, index) => (
+                        <div key={`${ca.axis}-${mem.userId}-${mem.nickname}-${index}`} className="flex items-center gap-3">
                           <span className="text-[13px] font-bold text-zinc-700 w-14 truncate">{mem.nickname}</span>
                           <div className="flex-1 h-[10px] bg-white border border-black/5 rounded-full overflow-hidden shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)]">
                             <div 

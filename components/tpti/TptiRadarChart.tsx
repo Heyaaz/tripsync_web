@@ -25,9 +25,14 @@ const AXES = ['mobility', 'photo', 'budget', 'theme'] as const;
 const MEMBER_COLORS = ['#2563EB', '#7C3AED', '#EA580C', '#059669', '#D97706'];
 
 export function TptiRadarChart({ memberScores, size = 280 }: TptiRadarChartProps) {
+  const series = memberScores.map((member, index) => ({
+    ...member,
+    seriesKey: `${member.userId}-${member.nickname}-${index}`,
+  }));
+
   const data = AXES.map((axis) => ({
     axis: AXIS_LABELS[axis],
-    ...Object.fromEntries(memberScores.map((m) => [m.nickname, m.scores[axis]])),
+    ...Object.fromEntries(series.map((member) => [member.seriesKey, member.scores[axis]])),
     fullMark: 100,
   }));
 
@@ -50,11 +55,11 @@ export function TptiRadarChart({ memberScores, size = 280 }: TptiRadarChartProps
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
           }}
         />
-        {memberScores.map((member, i) => (
+        {series.map((member, i) => (
           <Radar
-            key={member.userId}
+            key={member.seriesKey}
             name={member.nickname}
-            dataKey={member.nickname}
+            dataKey={member.seriesKey}
             stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]}
             fill={MEMBER_COLORS[i % MEMBER_COLORS.length]}
             fillOpacity={0.12}

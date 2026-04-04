@@ -1,28 +1,5 @@
-# TripSync Web Codex Guide
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
 
-Follow the repository root `AGENTS.md`, then apply the rules below for work inside `tmti_web/`.
-
-## Local PM Routing
-- For frontend planning, screen flow design, user stories, UI requirements, or frontend prioritization, read `.codex/agents/pm.md` first.
-- Treat that PM file as the default planning role for this subtree.
-- In PM mode, do not edit frontend source code unless the user explicitly asks to move into implementation.
-
-## Git Commit Rules
-- When frontend work requires a commit, follow the `git-commit-convention` skill.
-- Use the commit subject format `type: summary` with skill-aligned prefixes such as `feat:`, `fix:`, `chore:`, `docs:`, `ref:`, `style:`, or `test:`.
-- Keep the commit message to a simple single-line subject unless the user explicitly asks for more detail.
-- Avoid `git add .`; stage only the intended frontend files explicitly.
-
-## Shared Docs
-- Consult the relevant shared docs in `../docs/` before frontend planning, implementation, or documentation updates.
-- `../docs/PRD.md` - Product requirements, MVP scope, priorities, and core user/problem framing.
-- `../docs/TECH_SPEC.md` - Technical design covering frontend, backend, data, infra, and algorithm decisions for the MVP.
-- `../docs/API_SPEC.md` - REST API request/response contracts, validation rules, and error handling details.
-- `../docs/DB_SCHEMA.md` - MySQL schema, constraints, indexes, lifecycle, and deletion policy definitions.
-- `../docs/CONSENSUS_ENGINE.md` - Consensus engine rules for conflict analysis, slot allocation, place selection, satisfaction scoring, and LLM boundaries.
-- `../docs/TEST_PLAN.md` - Quality strategy, test scope, acceptance criteria, and verification targets.
-- `../docs/proposal_draft.md` - Service proposal narrative covering background, necessity, and contest-facing positioning.
-
-## Scope
-- Frontend application code and assets in this directory
-- UI flow and feature requirements for the web client
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->

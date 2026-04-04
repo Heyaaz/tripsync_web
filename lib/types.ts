@@ -94,6 +94,7 @@ export interface Place {
   name: string;
   address: string;
   imageUrl?: string;
+  description?: string;
   category?: string;
   isDepopulationArea?: boolean;
   latitude?: number;

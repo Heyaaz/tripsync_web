@@ -14,7 +14,16 @@ declare module 'react' {
 }
 
 declare global {
+  interface KakaoJsSdk {
+    init: (appKey: string) => void;
+    isInitialized: () => boolean;
+    Share: {
+      sendScrap: (options: { requestUrl: string }) => Promise<unknown>;
+    };
+  }
+
   interface Window {
+    Kakao?: KakaoJsSdk;
     kakao?: {
       maps?: {
         load?: (callback: () => void) => void;

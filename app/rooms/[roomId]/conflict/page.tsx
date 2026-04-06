@@ -9,7 +9,7 @@ import {
   AXIS_LABELS, SEVERITY_ICONS, SEVERITY_LABELS, getSeverity,
 } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
-import type { ConflictMap, RoomMember, TptiScores } from '@/lib/types';
+import type { ConflictAxis, ConflictMap, RoomMember, TptiScores } from '@/lib/types';
 
 // Mock data generation for demo
 function makeMockConflict(members: RoomMember[]): ConflictMap {
@@ -42,6 +42,63 @@ function makeMockConflict(members: RoomMember[]): ConflictMap {
       scores: m.scores!,
       characterName: m.characterName ?? '여행자',
     })),
+  };
+}
+
+function normalizeConflictMap(
+  roomId: number,
+  members: RoomMember[],
+  conflictData: {
+    commonAxes?: string[];
+    conflictAxes?: Array<Pick<ConflictAxis, 'axis' | 'gap' | 'severity'>>;
+    summaryText?: string;
+    members?: Array<{ userId: number; nickname: string; scores: TptiScores; characterName?: string }>;
+  } | null,
+): ConflictMap {
+  const scoreSource = conflictData?.members?.length
+    ? conflictData.members
+    : members
+        .filter((member): member is RoomMember & { scores: TptiScores } => Boolean(member.tptiCompleted && member.scores))
+        .map((member) => ({
+          userId: member.userId,
+          nickname: member.nickname,
+          scores: member.scores,
+          characterName: member.characterName,
+        }));
+
+  const axes = ['mobility', 'photo', 'budget', 'theme'] as const;
+  const axisMap = new Map(
+    (conflictData?.conflictAxes ?? []).map((axis) => [axis.axis, axis] as const),
+  );
+
+  const normalizedAxes = axes.map((axis) => {
+    const memberScores = scoreSource.map((member) => ({
+      userId: member.userId,
+      nickname: member.nickname,
+      score: member.scores[axis],
+    }));
+    const values = memberScores.map((member) => member.score);
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 0;
+    const fallbackGap = max - min;
+    const existing = axisMap.get(axis);
+
+    return {
+      axis,
+      gap: existing?.gap ?? fallbackGap,
+      severity: existing?.severity ?? getSeverity(fallbackGap),
+      min,
+      max,
+      members: memberScores,
+    };
+  });
+
+  return {
+    roomId,
+    commonAxes: conflictData?.commonAxes ?? normalizedAxes.filter((axis) => axis.severity === 'none').map((axis) => axis.axis),
+    conflictAxes: normalizedAxes,
+    summaryText: conflictData?.summaryText ?? '',
+    members: scoreSource,
   };
 }
 
@@ -91,12 +148,19 @@ export default function ConflictPage() {
   const loadData = useEffectEvent(async () => {
     setLoading(true);
     try {
-      const [memberRes, conflictRes] = await Promise.all([
-        roomApi.getMembers(roomId),
-        roomApi.getConflictMap(roomId),
-      ]);
-      setMembers(memberRes.data?.data?.members ?? []);
-      setConflictMap(conflictRes.data?.data ?? null);
+      const memberRes = await roomApi.getMembers(roomId);
+      const fetchedMembers = (memberRes.data?.data?.members ?? []) as RoomMember[];
+      setMembers(fetchedMembers);
+
+      const completed = fetchedMembers.filter((member) => member.tptiCompleted && member.scores);
+      if (completed.length < 2) {
+        setConflictMap(null);
+        return;
+      }
+
+      const conflictRes = await roomApi.getConflictMap(roomId);
+      const fetchedConflict = conflictRes.data?.data ?? null;
+      setConflictMap(normalizeConflictMap(roomId, fetchedMembers, fetchedConflict));
     } catch {
       // Demo fallback
       const mems = buildDemoMembers(user ?? undefined, tptiResult ?? undefined);
@@ -267,7 +331,7 @@ export default function ConflictPage() {
                     </div>
 
                     <div className="space-y-3.5">
-                      {ca.members.map((mem, index) => (
+                      {(ca.members ?? []).map((mem, index) => (
                         <div key={`${ca.axis}-${mem.userId}-${mem.nickname}-${index}`} className="flex items-center gap-3">
                           <span className="text-[13px] font-bold text-zinc-700 w-14 truncate">{mem.nickname}</span>
                           <div className="flex-1 h-[10px] bg-white border border-black/5 rounded-full overflow-hidden shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)]">

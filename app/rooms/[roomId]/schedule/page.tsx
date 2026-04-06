@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import ScheduleMapModalView from '@/components/schedule/ScheduleMapModalView';
 import { useAuthStore } from '@/lib/store/auth';
-import { roomApi } from '@/lib/api/client';
-import type { ScheduleOption, ScheduleSlot } from '@/lib/types';
+import { roomApi, scheduleApi } from '@/lib/api/client';
+import type { Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
 import { OPTION_LABELS } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
 import { MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
@@ -107,6 +108,27 @@ type DetailModalState = {
   scheduleSlots: ScheduleSlot[];
 };
 
+function buildShareScheduleUrl(scheduleId?: number | null) {
+  if (!scheduleId || typeof window === 'undefined') {
+    return '';
+  }
+
+  return `${window.location.origin}/share/schedule/${scheduleId}`;
+}
+
+function normalizeConfirmedSchedule(schedule: Schedule): ScheduleOption {
+  const optionType = schedule.optionType ?? 'balanced';
+  return {
+    scheduleId: schedule.id,
+    optionType,
+    label: OPTION_LABELS[optionType]?.label ?? '확정 일정',
+    summary: schedule.summary,
+    groupSatisfaction: schedule.groupSatisfaction,
+    satisfactionByUser: schedule.satisfactionByUser,
+    slots: schedule.slots,
+  };
+}
+
 export default function SchedulePage() {
   const params = useParams();
   const router = useRouter();
@@ -120,6 +142,7 @@ export default function SchedulePage() {
   const [expandedOption, setExpandedOption] = useState<string | null>(null);
   const [loadingConfirm, setLoadingConfirm] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
+  const [shareScheduleId, setShareScheduleId] = useState<number | null>(null);
   const [customSlotDrafts, setCustomSlotDrafts] = useState<Record<string, { name: string; address: string; reason: string }>>({});
   const [detailModalSlot, setDetailModalSlot] = useState<DetailModalState | null>(null);
   const [modalView, setModalView] = useState<'detail' | 'map'>('detail');
@@ -153,15 +176,34 @@ export default function SchedulePage() {
     if (!selectedOption) return;
     setLoadingConfirm(true);
     try {
-      await roomApi.confirmSchedule(roomId, { optionType: selectedOption.optionType });
+      const res = await roomApi.confirmSchedule(roomId, { optionType: selectedOption.optionType });
+      const confirmedScheduleId = res.data?.data?.scheduleId as number | undefined;
+      const nextShareScheduleId = confirmedScheduleId ?? selectedOption.scheduleId ?? null;
+      setShareScheduleId(nextShareScheduleId);
+
+      if (confirmedScheduleId) {
+        const confirmedScheduleRes = await scheduleApi.getById(confirmedScheduleId);
+        const confirmedSchedule = confirmedScheduleRes.data?.data as Schedule | undefined;
+        if (confirmedSchedule) {
+          setConfirmedOption(normalizeConfirmedSchedule(confirmedSchedule));
+          setPhase('confirmed');
+          setLoadingConfirm(false);
+          return;
+        }
+      }
     } catch { /* demo */ }
+
+    setShareScheduleId(selectedOption.scheduleId ?? null);
     setConfirmedOption(selectedOption);
     setPhase('confirmed');
     setLoadingConfirm(false);
   }
 
   function copyShareLink() {
-    const url = `${window.location.origin}/share/schedule/demo-${roomId}`;
+    const url = buildShareScheduleUrl(shareScheduleId ?? confirmedOption?.scheduleId ?? selectedOption?.scheduleId);
+    if (!url) {
+      return;
+    }
     navigator.clipboard.writeText(url).then(() => {
       setCopyDone(true);
       setTimeout(() => setCopyDone(false), 2000);
@@ -282,7 +324,7 @@ export default function SchedulePage() {
             </div>
             <span className="app-kicker mb-4">Consensus Engine</span>
             <h1 className="text-3xl font-extrabold tracking-tight mb-4 text-zinc-900">AI 일정 매직 셋업</h1>
-            <p className="text-zinc-700 text-sm md:text-base mb-2 font-normal">동행자 전원의 갈등 요소를 완벽히 분석했습니다.</p>
+            <p className="text-zinc-700 text-sm md:text-base mb-2 font-normal">동행자 전원의 취향 차이를 바탕으로 참고할 제안 흐름을 정리했습니다.</p>
             <p className="text-emerald-700 font-normal text-sm">이제 서로 마음 상하지 않는 타협 일정을 제안해 드릴게요.</p>
           </div>
 
@@ -585,10 +627,12 @@ export default function SchedulePage() {
                 <>
                   {detailModalSlot.slot.place.imageUrl && (
                     <div className="relative w-full aspect-video bg-zinc-100">
-                      <img 
-                        src={detailModalSlot.slot.place.imageUrl} 
-                        alt={detailModalSlot.slot.place.name} 
-                        className="w-full h-full object-cover" 
+                      <Image
+                        src={detailModalSlot.slot.place.imageUrl}
+                        alt={detailModalSlot.slot.place.name}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 384px"
+                        className="object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                     </div>

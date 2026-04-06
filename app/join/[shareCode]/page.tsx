@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, tptiApi, roomApi } from '@/lib/api/client';
@@ -44,6 +44,7 @@ export default function JoinPage() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<number[]>(Array(8).fill(0));
   const [error, setError] = useState('');
+  const autoJoinAttemptRef = useRef<string | null>(null);
 
   const loadRoom = useEffectEvent(async () => {
     try {
@@ -78,8 +79,20 @@ export default function JoinPage() {
       });
     }
 
-    if (user && tptiResult) {
+    if (user && tptiResult?.resultId) {
+      const joinKey = `${shareCode}:${user.id}:${tptiResult.resultId}`;
+      if (autoJoinAttemptRef.current !== joinKey) {
+        autoJoinAttemptRef.current = joinKey;
+        setStep('submitting');
+        try {
+          await roomApi.join(shareCode, { tptiResultId: tptiResult.resultId });
+        } catch {
+          // 이미 방에 참여한 경우나 네트워크가 불안정한 경우에도 이후 흐름은 유지한다.
+        }
+      }
       setStep('done');
+    } else if (user && tptiResult) {
+      setStep('tpti');
     } else if (user) {
       setStep('tpti');
     } else {
@@ -132,8 +145,9 @@ export default function JoinPage() {
     try {
       const res = await tptiApi.submit({ answers: finalAnswers });
       if (res.data?.data) result.resultId = res.data.data.resultId;
-      // Join room
-      await roomApi.join(shareCode, { tptiResultId: result.resultId });
+      if (result.resultId > 0) {
+        await roomApi.join(shareCode, { tptiResultId: result.resultId });
+      }
     } catch {
       // local demo
     }

@@ -9,41 +9,9 @@ import {
   AXIS_LABELS, SEVERITY_ICONS, SEVERITY_LABELS, getSeverity,
 } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
+import { getApiErrorMessage } from '@/lib/utils/error';
 import type { ConflictAxis, ConflictMap, RoomMember, TptiScores } from '@/lib/types';
 
-// Mock data generation for demo
-function makeMockConflict(members: RoomMember[]): ConflictMap {
-  const axes = ['mobility', 'photo', 'budget', 'theme'] as const;
-  const conflictAxes = axes.map((axis) => {
-    const scores = members.filter((m) => m.scores).map((m) => ({
-      userId: m.userId,
-      nickname: m.nickname,
-      score: m.scores![axis as keyof TptiScores],
-    }));
-    const vals = scores.map((s) => s.score);
-    const gap = vals.length > 1 ? Math.max(...vals) - Math.min(...vals) : 0;
-    return { axis, gap, severity: getSeverity(gap), min: Math.min(...vals), max: Math.max(...vals), members: scores };
-  });
-  const commonAxes = conflictAxes.filter((a) => a.severity === 'none').map((a) => a.axis);
-  const lines = conflictAxes
-    .filter((a) => a.severity !== 'none')
-    .map((a) => {
-      const sorted = [...a.members].sort((x, y) => y.score - x.score);
-      return `${sorted[0].nickname}님과 ${sorted[sorted.length - 1].nickname}님은 ${AXIS_LABELS[a.axis]}에서 ${a.gap}점 차이로 ${SEVERITY_LABELS[a.severity]}합니다.`;
-    });
-  return {
-    roomId: 0,
-    commonAxes,
-    conflictAxes,
-    summaryText: lines.join(' '),
-    members: members.filter((m) => m.scores).map((m) => ({
-      userId: m.userId,
-      nickname: m.nickname,
-      scores: m.scores!,
-      characterName: m.characterName ?? '여행자',
-    })),
-  };
-}
 
 function normalizeConflictMap(
   roomId: number,
@@ -102,47 +70,20 @@ function normalizeConflictMap(
   };
 }
 
-const MOCK_MEMBERS: RoomMember[] = [
-  { userId: 1, nickname: '방장(나)', role: 'host', tptiCompleted: true, scores: { mobility: 85, photo: 70, budget: 30, theme: 40 }, characterName: '뚜벅이 탐험가' },
-  { userId: 2, nickname: '민지', role: 'member', tptiCompleted: true, scores: { mobility: 20, photo: 80, budget: 75, theme: 65 }, characterName: '럭셔리 인플루언서' },
-  { userId: 3, nickname: '준호', role: 'member', tptiCompleted: true, scores: { mobility: 55, photo: 40, budget: 45, theme: 30 }, characterName: '자연 탐방가' },
-];
-
 function getMemberRenderKey(member: Pick<RoomMember, 'userId' | 'nickname' | 'role'>, index: number) {
   return `${member.userId}-${member.nickname}-${member.role}-${index}`;
-}
-
-function buildDemoMembers(user?: { id: number; nickname: string }, tptiResult?: { scores: TptiScores; characterName: string }) {
-  const hostId = user?.id ?? MOCK_MEMBERS[0].userId;
-  const hostNickname = user?.nickname ?? MOCK_MEMBERS[0].nickname;
-
-  const otherMembers = MOCK_MEMBERS.slice(1).map((member, index) => ({
-    ...member,
-    userId: member.userId === hostId ? 1000 + index : member.userId,
-  }));
-
-  return [
-    {
-      userId: hostId,
-      nickname: hostNickname,
-      role: 'host' as const,
-      tptiCompleted: true,
-      scores: tptiResult?.scores ?? MOCK_MEMBERS[0].scores,
-      characterName: tptiResult?.characterName ?? MOCK_MEMBERS[0].characterName,
-    },
-    ...otherMembers,
-  ];
 }
 
 export default function ConflictPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = Number(params.roomId);
-  const { currentRoom, user, tptiResult } = useAuthStore();
+  const { currentRoom, user } = useAuthStore();
 
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [conflictMap, setConflictMap] = useState<ConflictMap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [copyDone, setCopyDone] = useState(false);
 
   const loadData = useEffectEvent(async () => {
@@ -161,11 +102,8 @@ export default function ConflictPage() {
       const conflictRes = await roomApi.getConflictMap(roomId);
       const fetchedConflict = conflictRes.data?.data ?? null;
       setConflictMap(normalizeConflictMap(roomId, fetchedMembers, fetchedConflict));
-    } catch {
-      // Demo fallback
-      const mems = buildDemoMembers(user ?? undefined, tptiResult ?? undefined);
-      setMembers(mems);
-      setConflictMap(makeMockConflict(mems));
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '데이터를 불러오지 못했습니다. 페이지를 새로고침해주세요.'));
     } finally {
       setLoading(false);
     }
@@ -189,6 +127,17 @@ export default function ConflictPage() {
       <div className="app-shell app-page items-center justify-center">
         <div className="w-12 h-12 rounded-full border-4 border-zinc-200 border-t-orange-500 animate-spin" />
         <p className="mt-4 font-bold text-orange-600">데이터를 분석하고 있습니다…</p>
+      </div>
+    );
+  }
+
+  if (!loading && error) {
+    return (
+      <div className="app-shell app-page items-center justify-center">
+        <div className="app-alert app-alert-danger max-w-sm">
+          <iconify-icon icon="solar:danger-triangle-bold-duotone" width="20" className="shrink-0"></iconify-icon>
+          <p className="text-sm font-medium">{error}</p>
+        </div>
       </div>
     );
   }

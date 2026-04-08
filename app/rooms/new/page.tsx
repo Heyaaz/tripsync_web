@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, roomApi } from '@/lib/api/client';
 import { formatTripDateRange, isValidDateRange } from '@/lib/utils/date';
+import { getApiErrorMessage } from '@/lib/utils/error';
 
 export default function RoomsNewPage() {
   const router = useRouter();
@@ -42,8 +43,7 @@ export default function RoomsNewPage() {
         setStep('form');
       }
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
-      setError(axiosErr?.response?.data?.error?.message || '인증에 실패했습니다. 다시 시도해주세요.');
+      setError(getApiErrorMessage(err, '인증에 실패했습니다. 다시 시도해주세요.'));
     } finally {
       setLoading(false);
     }
@@ -74,23 +74,8 @@ export default function RoomsNewPage() {
         });
         router.push(`/rooms/${roomData.roomId}/conflict`);
       }
-    } catch {
-      // Demo mode
-      const mockShareCode = `CNAM${Date.now().toString(36).toUpperCase().slice(-6)}`;
-      const mockRoom = {
-        roomId: Date.now(),
-        destination,
-        tripDate: tripDateLabel,
-        tripStartDate,
-        tripEndDate,
-        shareCode: mockShareCode,
-        status: 'waiting' as const,
-        hostUserId: user?.id ?? 1,
-        memberCount: 1,
-        createdAt: new Date().toISOString(),
-      };
-      setCurrentRoom(mockRoom);
-      router.push(`/rooms/${mockRoom.roomId}/conflict`);
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '방 생성에 실패했습니다. 다시 시도해주세요.'));
     } finally {
       setLoading(false);
     }

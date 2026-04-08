@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/store/auth';
 import { authApi, tptiApi, roomApi } from '@/lib/api/client';
 import { TPTI_QUESTIONS, calculateScores, getCharacter } from '@/lib/utils/tpti';
 import { formatTripDateRange, parseTripDateRange } from '@/lib/utils/date';
+import { getApiErrorMessage } from '@/lib/utils/error';
 import type { TptiResult } from '@/lib/types';
 
 type Step = 'loading' | 'intro' | 'nickname' | 'tpti' | 'submitting' | 'done';
@@ -66,17 +67,10 @@ export default function JoinPage() {
           createdAt: new Date().toISOString(),
         });
       }
-    } catch {
-      // Demo: create mock room
-      setRoomInfo({
-        roomId: 101, destination: '충남', tripDate: '2026-05-10 ~ 2026-05-12', tripStartDate: '2026-05-10', tripEndDate: '2026-05-12',
-        hostNickname: '지훈', memberCount: 1,
-      });
-      setCurrentRoom({
-        roomId: 101, destination: '충남', tripDate: '2026-05-10 ~ 2026-05-12', tripStartDate: '2026-05-10', tripEndDate: '2026-05-12',
-        shareCode, status: 'waiting', hostUserId: 1, memberCount: 1,
-        createdAt: new Date().toISOString(),
-      });
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '여행 방 정보를 불러오지 못했습니다. 링크를 다시 확인해주세요.'));
+      setStep('intro');
+      return;
     }
 
     if (user && tptiResult?.resultId) {
@@ -111,8 +105,9 @@ export default function JoinPage() {
       const res = await authApi.guest({ nickname: nickname.trim(), shareCode });
       const userData = res.data?.data?.user;
       if (userData) setUser(userData);
-    } catch {
-      setUser({ id: Date.now(), nickname: nickname.trim(), isGuest: true, authProvider: 'guest' });
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '참여 처리 중 오류가 발생했습니다. 다시 시도해주세요.'));
+      return;
     }
     setStep('tpti');
   }

@@ -9,64 +9,9 @@ import { roomApi, scheduleApi } from '@/lib/api/client';
 import type { Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
 import { OPTION_LABELS } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
+import { getApiErrorMessage } from '@/lib/utils/error';
 import { MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
 
-// Mock schedule data
-const MOCK_OPTIONS: ScheduleOption[] = [
-  {
-    optionType: 'balanced',
-    label: '균형형',
-    summary: '모두가 조금씩 타협하는 평화로운 선택',
-    groupSatisfaction: 72,
-    satisfactionByUser: [
-      { userId: 1, nickname: '방장(나)', score: 74 },
-      { userId: 2, nickname: '민지', score: 70 },
-      { userId: 3, nickname: '준호', score: 71 },
-    ],
-    slots: [
-      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T11:30:00+09:00', slotType: 'personal', targetUserId: 1, targetNickname: '방장(나)', reasonAxis: 'mobility', reason: '활동성 높은 취향 반영', place: { id: 1, name: '공주 공산성', address: '충남 공주시 웅진로 280', isDepopulationArea: false, latitude: 36.4626, longitude: 127.1194, imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400', description: '백제 웅진 도읍기의 웅장한 왕성으로, 아름다운 성곽길을 따라 걸으며 금강의 경치와 역사의 숨결을 동시에 느낄 수 있는 대표적인 명소입니다.' } },
-      { orderIndex: 2, startTime: '2026-05-02T11:30:00+09:00', endTime: '2026-05-02T13:00:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '공통 지대(식도락) 반영', place: { id: 2, name: '공주 한옥마을 맛집거리', address: '충남 공주시 반죽동', isDepopulationArea: false, latitude: 36.4554, longitude: 127.1248, description: '고즈넉한 한옥의 정취를 느끼며 공주의 특색 있는 로컬 식도락을 즐길 수 있는 거리입니다.' } },
-      { orderIndex: 3, startTime: '2026-05-02T13:00:00+09:00', endTime: '2026-05-02T15:30:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'photo', reason: '사진 촬영 취향 존중', place: { id: 3, name: '부여 궁남지', address: '충남 부여군 부여읍 궁남로 52', isDepopulationArea: true, latitude: 36.2758, longitude: 126.9124, imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400', description: '우리나라 최초의 인공 정원으로, 백제 무왕의 서동요 전설이 깃든 아름다운 연못에서 수많은 연꽃과 수양버들을 배경으로 인생샷을 남겨보세요.' } },
-      { orderIndex: 4, startTime: '2026-05-02T15:30:00+09:00', endTime: '2026-05-02T17:30:00+09:00', slotType: 'personal', targetUserId: 3, targetNickname: '준호', reasonAxis: 'theme', reason: '자연 힐링 테마 반영', place: { id: 4, name: '부여 백마강 황포돛배', address: '충남 부여군 부여읍 나루터로 50', isDepopulationArea: true, latitude: 36.2794, longitude: 126.9093, description: '백제 사람들의 교통수단이었던 황포돛배를 타고 백마강을 유람하며, 수려한 낙화암 일대 자연 경관 속에서 진정한 힐링을 경험할 수 있습니다.' } },
-      { orderIndex: 5, startTime: '2026-05-02T17:30:00+09:00', endTime: '2026-05-02T19:30:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '공통 관심사(역사) 반영', place: { id: 5, name: '부여 정림사지', address: '충남 부여군 부여읍 정림로 83', isDepopulationArea: true, latitude: 36.2818, longitude: 126.9149, description: '유네스코 세계문화유산인 정림사지에서 우아하고 장중한 백제의 석탑 건축 양식을 탐방합니다.' } },
-    ],
-  },
-  {
-    optionType: 'individual',
-    label: '개성 충만형',
-    summary: '각자의 확고한 1순위 취향을 번갈아가며 체험',
-    groupSatisfaction: 68,
-    satisfactionByUser: [
-      { userId: 1, nickname: '방장(나)', score: 82 },
-      { userId: 2, nickname: '민지', score: 77 },
-      { userId: 3, nickname: '준호', score: 61 },
-    ],
-    slots: [
-      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T12:00:00+09:00', slotType: 'personal', targetUserId: 1, targetNickname: '방장(나)', reasonAxis: 'mobility', reason: '극소수파 뚜벅이 코스', place: { id: 6, name: '계룡산 국립공원 ท레킹', address: '충남 공주시 반포면 계룡산로 805-246', isDepopulationArea: false, latitude: 36.3495, longitude: 127.2292, description: '충남 제1의 명산인 계룡산에서 맑은 공기와 수려한 산세를 만끽할 수 있는 트레킹 코스입니다.' } },
-      { orderIndex: 2, startTime: '2026-05-02T12:00:00+09:00', endTime: '2026-05-02T14:00:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'budget', reason: '하이엔드 파인다이닝', place: { id: 7, name: '공주 유구 명품 한정식', address: '충남 공주시 유구읍', isDepopulationArea: true, latitude: 36.5484, longitude: 126.9478, description: '제철 식재료를 활용해 정성껏 준비된 최고급 한정식을 맛보며 미식의 진수를 경험해 보세요.' } },
-      { orderIndex: 3, startTime: '2026-05-02T14:00:00+09:00', endTime: '2026-05-02T16:30:00+09:00', slotType: 'personal', targetUserId: 2, targetNickname: '민지', reasonAxis: 'photo', reason: 'SNS 핫스팟 인증샷', place: { id: 8, name: '태안 꽃지해수욕장', address: '충남 태안군 안면읍 꽃지해안로 400', isDepopulationArea: true, latitude: 36.5035, longitude: 126.3381, imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400', description: '할미바위와 할아비바위 뒤로 붉게 물드는 환상적인 저녁 노을을 배경으로 최고의 인생샷을 남길 수 있는 아름다운 해변입니다.' } },
-      { orderIndex: 4, startTime: '2026-05-02T16:30:00+09:00', endTime: '2026-05-02T19:00:00+09:00', slotType: 'personal', targetUserId: 3, targetNickname: '준호', reasonAxis: 'theme', reason: '조용한 휴식', place: { id: 9, name: '태안 안면도 자연휴양림', address: '충남 태안군 안면읍 안면대로 1660-24', isDepopulationArea: true, latitude: 36.5163, longitude: 126.3467, description: '초록빛 안면송 벌판 속에서 조용한 여유를 즐기며 피톤치드를 한가득 마실 수 있는 매력적인 산책로입니다.' } },
-    ],
-  },
-  {
-    optionType: 'discovery',
-    label: '로컬 발굴형',
-    summary: '잘 알려지지 않은 충남의 진짜 매력 탐험',
-    groupSatisfaction: 65,
-    satisfactionByUser: [
-      { userId: 1, nickname: '방장(나)', score: 68 },
-      { userId: 2, nickname: '민지', score: 65 },
-      { userId: 3, nickname: '준호', score: 71 },
-    ],
-    slots: [
-      { orderIndex: 1, startTime: '2026-05-02T09:00:00+09:00', endTime: '2026-05-02T11:00:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '인구감소지역 생태 체험', place: { id: 10, name: '서천 국립생태원', address: '충남 서천군 마서면 금강로 1210', isDepopulationArea: true, latitude: 36.0192, longitude: 126.7424, description: '전 세계의 다양한 기후대 생태계를 한곳에서 체험하며 살아있는 생물자원의 중요성을 일깨울 수 있는 종합 생태 박물관입니다.' } },
-      { orderIndex: 2, startTime: '2026-05-02T11:00:00+09:00', endTime: '2026-05-02T13:00:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '로컬 재료 로컬 푸드', place: { id: 11, name: '서천 장항 로컬 라이프스타일 샵', address: '충남 서천군 장항읍', isDepopulationArea: true, latitude: 36.0112, longitude: 126.6937, description: '장항읍 고유의 해산물과 로컬 재료로 만든 다채로운 푸드와 독창적인 소품들을 만나볼 수 있는 복합 생활 공간입니다.' } },
-      { orderIndex: 3, startTime: '2026-05-02T13:00:00+09:00', endTime: '2026-05-02T15:30:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '이국적인 서해바다', place: { id: 12, name: '보령 대천해수욕장', address: '충남 보령시 신흑동 대천해수욕장로 97', isDepopulationArea: true, latitude: 36.3051, longitude: 126.5118, imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400', description: '황금빛 백사장이 넓게 펼쳐진 서해안 최고의 휴양지에서 산책과 해양 레포츠를 즐기며 에너지를 충전하세요.' } },
-      { orderIndex: 4, startTime: '2026-05-02T15:30:00+09:00', endTime: '2026-05-02T17:30:00+09:00', slotType: 'common', reasonAxis: 'theme', reason: '인구감소지역 재생 공간', place: { id: 13, name: '보령 성주산 자연휴양림', address: '충남 보령시 성주면 성주산로 673', isDepopulationArea: true, latitude: 36.3447, longitude: 126.6688, description: '울창한 편백나무 숲과 맑은 계곡물이 어우러져 깊은 산림욕과 더불어 심신을 편하게 쉴 수 있는 힐링 스팟입니다.' } },
-      { orderIndex: 5, startTime: '2026-05-02T17:30:00+09:00', endTime: '2026-05-02T19:30:00+09:00', slotType: 'common', reasonAxis: 'common', reason: '로컬 야경', place: { id: 14, name: '보령 오천항 일몰 투어', address: '충남 보령시 오천면 오천항리', isDepopulationArea: true, latitude: 36.4345, longitude: 126.4764, description: '오천항의 고즈넉한 항구 풍경과 함께, 잔잔한 서해로 붉게 떨어지는 일몰을 감상하며 하루를 낭만적으로 마무리해보세요.' } },
-    ],
-  },
-];
 
 function formatTime(iso: string) {
   if (!iso) return '';
@@ -141,6 +86,7 @@ export default function SchedulePage() {
   const [confirmedOption, setConfirmedOption] = useState<ScheduleOption | null>(null);
   const [expandedOption, setExpandedOption] = useState<string | null>(null);
   const [loadingConfirm, setLoadingConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [copyDone, setCopyDone] = useState(false);
   const [shareScheduleId, setShareScheduleId] = useState<number | null>(null);
   const [customSlotDrafts, setCustomSlotDrafts] = useState<Record<string, { name: string; address: string; reason: string }>>({});
@@ -149,6 +95,7 @@ export default function SchedulePage() {
 
   async function handleGenerate() {
     setPhase('generating');
+    setError(null);
     try {
       const res = await roomApi.generateSchedule(roomId, {
         destination: currentRoom?.destination ?? '충남',
@@ -159,27 +106,23 @@ export default function SchedulePage() {
         endTime: '21:00',
       });
       const data = res.data?.data;
-      if (data?.options) {
-        setOptions(data.options);
-        setPhase('options');
-        return;
-      }
-    } catch { /* demo fallback */ }
-
-    // Demo: 4 sec delay
-    await new Promise((r) => setTimeout(r, 4000));
-    setOptions(MOCK_OPTIONS);
-    setPhase('options');
+      if (!data?.options) throw new Error('empty');
+      setOptions(data.options);
+      setPhase('options');
+    } catch {
+      setError('일정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      setPhase('generate');
+    }
   }
 
   async function handleConfirm() {
     if (!selectedOption) return;
     setLoadingConfirm(true);
+    setError(null);
     try {
       const res = await roomApi.confirmSchedule(roomId, { optionType: selectedOption.optionType });
       const confirmedScheduleId = res.data?.data?.scheduleId as number | undefined;
-      const nextShareScheduleId = confirmedScheduleId ?? selectedOption.scheduleId ?? null;
-      setShareScheduleId(nextShareScheduleId);
+      setShareScheduleId(confirmedScheduleId ?? selectedOption.scheduleId ?? null);
 
       if (confirmedScheduleId) {
         const confirmedScheduleRes = await scheduleApi.getById(confirmedScheduleId);
@@ -187,16 +130,15 @@ export default function SchedulePage() {
         if (confirmedSchedule) {
           setConfirmedOption(normalizeConfirmedSchedule(confirmedSchedule));
           setPhase('confirmed');
-          setLoadingConfirm(false);
           return;
         }
       }
-    } catch { /* demo */ }
-
-    setShareScheduleId(selectedOption.scheduleId ?? null);
-    setConfirmedOption(selectedOption);
-    setPhase('confirmed');
-    setLoadingConfirm(false);
+      throw new Error('no schedule');
+    } catch {
+      setError('일정 확정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setLoadingConfirm(false);
+    }
   }
 
   function copyShareLink() {
@@ -340,6 +282,12 @@ export default function SchedulePage() {
               </div>
             </div>
           </div>
+
+          {error && (
+            <div className="app-alert app-alert-danger max-w-xs mx-auto w-full mb-2">
+              {error}
+            </div>
+          )}
 
           <div className="max-w-xs mx-auto w-full flex flex-col gap-4">
             <button className="btn-primary py-4 shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_50px_rgba(59,130,246,0.5)]" onClick={handleGenerate}>
@@ -593,7 +541,12 @@ export default function SchedulePage() {
 
         {/* Sticky Action Footer */}
         <div className="app-sticky-cta pointer-events-none">
-          <div className="pointer-events-auto">
+          <div className="pointer-events-auto flex flex-col gap-2">
+            {error && (
+              <div className="app-alert app-alert-danger">
+                {error}
+              </div>
+            )}
             <button
               className="btn-primary w-full py-4 text-base shadow-[0_0_40px_rgba(59,130,246,0.3)] transition-all data-[disabled=true]:shadow-none data-[disabled=true]:opacity-30"
               onClick={handleConfirm}

@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import ScheduleMapModalView from '@/components/schedule/ScheduleMapModalView';
 import { useAuthStore } from '@/lib/store/auth';
 import { roomApi, scheduleApi } from '@/lib/api/client';
-import type { Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
+import type { Room, Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
 import { OPTION_LABELS } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
 import { MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
+import { normalizeRoomSummary } from '@/lib/utils/room';
 
 
 function formatTime(iso: string) {
@@ -78,8 +79,9 @@ export default function SchedulePage() {
   const params = useParams();
   const router = useRouter();
   const roomId = Number(params.roomId);
-  const { currentRoom } = useAuthStore();
+  const { currentRoom, setCurrentRoom } = useAuthStore();
 
+  const [roomContext, setRoomContext] = useState<Room | null>(currentRoom?.roomId === roomId ? currentRoom : null);
   const [phase, setPhase] = useState<'generate' | 'generating' | 'options' | 'confirmed'>('generate');
   const [options, setOptions] = useState<ScheduleOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ScheduleOption | null>(null);
@@ -89,19 +91,39 @@ export default function SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [copyDone, setCopyDone] = useState(false);
   const [shareScheduleId, setShareScheduleId] = useState<number | null>(null);
-  const [customSlotDrafts, setCustomSlotDrafts] = useState<Record<string, { name: string; address: string; reason: string }>>({});
   const [detailModalSlot, setDetailModalSlot] = useState<DetailModalState | null>(null);
   const [modalView, setModalView] = useState<'detail' | 'map'>('detail');
+
+  const hydrateRoomContext = useCallback(async () => {
+    const roomRes = await roomApi.getById(roomId);
+    const roomData = roomRes.data?.data;
+
+    if (!roomData) {
+      throw new Error('room_not_found');
+    }
+
+    const normalizedRoom = normalizeRoomSummary(roomData);
+    setRoomContext(normalizedRoom);
+    setCurrentRoom(normalizedRoom);
+    return normalizedRoom;
+  }, [roomId, setCurrentRoom]);
+
+  useEffect(() => {
+    void hydrateRoomContext().catch(() => {
+      // 화면 진입 시 에러는 생성/확정 액션에서 다시 사용자에게 노출한다.
+    });
+  }, [hydrateRoomContext]);
 
   async function handleGenerate() {
     setPhase('generating');
     setError(null);
     try {
+      const activeRoom = roomContext ?? await hydrateRoomContext();
       const res = await roomApi.generateSchedule(roomId, {
-        destination: currentRoom?.destination ?? '충남',
-        tripDate: currentRoom?.tripStartDate ?? currentRoom?.tripDate ?? '2026-05-02',
-        tripStartDate: currentRoom?.tripStartDate,
-        tripEndDate: currentRoom?.tripEndDate,
+        destination: activeRoom.destination,
+        tripDate: activeRoom.tripStartDate ?? activeRoom.tripDate,
+        tripStartDate: activeRoom.tripStartDate,
+        tripEndDate: activeRoom.tripEndDate,
         startTime: '09:00',
         endTime: '21:00',
       });
@@ -109,8 +131,8 @@ export default function SchedulePage() {
       if (!data?.options) throw new Error('empty');
       setOptions(data.options);
       setPhase('options');
-    } catch {
-      setError('일정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '일정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'));
       setPhase('generate');
     }
   }
@@ -150,58 +172,6 @@ export default function SchedulePage() {
       setCopyDone(true);
       setTimeout(() => setCopyDone(false), 2000);
     });
-  }
-
-  function updateCustomSlotDraft(optionType: string, field: 'name' | 'address' | 'reason', value: string) {
-    setCustomSlotDrafts((prev) => ({
-      ...prev,
-      [optionType]: {
-        name: prev[optionType]?.name ?? '',
-        address: prev[optionType]?.address ?? '',
-        reason: prev[optionType]?.reason ?? '',
-        [field]: value,
-      },
-    }));
-  }
-
-  function addCustomSlot(optionType: string) {
-    const draft = customSlotDrafts[optionType];
-    if (!draft?.name.trim()) return;
-
-    setOptions((prev) =>
-      prev.map((option) => {
-        if (option.optionType !== optionType) return option;
-
-        const nextSlots = [...(option.slots ?? [])];
-        const newSlot: ScheduleSlot = {
-          orderIndex: nextSlots.length + 1,
-          startTime: '',
-          endTime: '',
-          slotType: 'common',
-          reasonAxis: 'common',
-          reason: draft.reason.trim() || '직접 추가한 코스',
-          place: {
-            id: Date.now(),
-            name: draft.name.trim(),
-            address: draft.address.trim() || '세부 장소는 추후 조정',
-            isDepopulationArea: false,
-          },
-        };
-
-        nextSlots.push(newSlot);
-        return {
-          ...option,
-          optionType: option.optionType,
-          slots: nextSlots,
-          summary: option.optionType === 'manual' ? draft.reason.trim() || option.summary : option.summary,
-        };
-      })
-    );
-
-    setCustomSlotDrafts((prev) => ({
-      ...prev,
-      [optionType]: { name: '', address: '', reason: '' },
-    }));
   }
 
   function openDetailModal({
@@ -274,11 +244,11 @@ export default function SchedulePage() {
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
                 <span className="text-sm font-medium text-zinc-700">여행지</span>
-                <span className="text-sm font-bold text-zinc-900">{currentRoom?.destination ?? '충남 전역'}</span>
+                <span className="text-sm font-bold text-zinc-900">{roomContext?.destination ?? '여행지 확인 중'}</span>
               </div>
               <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
                 <span className="text-sm font-medium text-zinc-700">일자</span>
-                <span className="text-sm font-bold text-zinc-900">{formatTripDateRange(currentRoom?.tripStartDate, currentRoom?.tripEndDate, currentRoom?.tripDate)}</span>
+                <span className="text-sm font-bold text-zinc-900">{formatTripDateRange(roomContext?.tripStartDate, roomContext?.tripEndDate, roomContext?.tripDate)}</span>
               </div>
             </div>
           </div>
@@ -493,40 +463,16 @@ export default function SchedulePage() {
                         );
                       })}
                     </div>
-                    <div className="mt-4 rounded-[20px] border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <iconify-icon icon="solar:add-circle-bold-duotone" width="18" className="text-orange-500"></iconify-icon>
-                        <p className="text-sm font-medium text-zinc-800">이 제안에 직접 코스 추가하기</p>
-                      </div>
-                      <div className="grid gap-3">
-                        <input
-                          className="input-field"
-                          placeholder="추가할 장소 또는 코스 이름"
-                          value={customSlotDrafts[opt.optionType]?.name ?? ''}
-                          onChange={(e) => updateCustomSlotDraft(opt.optionType, 'name', e.target.value)}
-                        />
-                        <input
-                          className="input-field"
-                          placeholder="주소 또는 지역 메모"
-                          value={customSlotDrafts[opt.optionType]?.address ?? ''}
-                          onChange={(e) => updateCustomSlotDraft(opt.optionType, 'address', e.target.value)}
-                        />
-                        <input
-                          className="input-field"
-                          placeholder="왜 추가하고 싶은지 간단한 메모"
-                          value={customSlotDrafts[opt.optionType]?.reason ?? ''}
-                          onChange={(e) => updateCustomSlotDraft(opt.optionType, 'reason', e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addCustomSlot(opt.optionType);
-                          }}
-                          className="w-full rounded-[16px] border border-zinc-300 bg-white text-zinc-700 text-sm font-medium py-3 shadow-[0_6px_16px_rgba(15,23,42,0.04)] hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
-                        >
-                          이 제안에 코스 추가
-                        </button>
+                    <div className="mt-4 rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-4">
+                      <div className="flex items-start gap-2">
+                        <iconify-icon icon="solar:pen-new-square-line-duotone" width="18" className="text-zinc-500 mt-0.5"></iconify-icon>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-800">제안안은 비교용으로만 확인해 주세요</p>
+                          <p className="mt-1 text-sm font-normal text-zinc-700 leading-relaxed">
+                            아직 제안 단계에서는 코스를 직접 추가해도 서버에 저장되지 않습니다. 마음에 드는 옵션을 먼저 고른 뒤,
+                            확정 일정 기준으로 세부 조정을 논의하는 흐름이 더 안전합니다.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

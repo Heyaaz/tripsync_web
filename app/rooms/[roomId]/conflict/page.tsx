@@ -3,14 +3,15 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
-import { roomApi } from '@/lib/api/client';
+import { authApi, roomApi } from '@/lib/api/client';
 import { TptiRadarChart, MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
 import {
   AXIS_LABELS, SEVERITY_ICONS, SEVERITY_LABELS, getSeverity,
 } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
-import type { ConflictAxis, ConflictMap, RoomMember, TptiScores } from '@/lib/types';
+import { normalizeRoomSummary } from '@/lib/utils/room';
+import type { ConflictAxis, ConflictMap, Room, RoomMember, TptiScores } from '@/lib/types';
 
 
 function normalizeConflictMap(
@@ -78,17 +79,56 @@ export default function ConflictPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = Number(params.roomId);
-  const { currentRoom, user } = useAuthStore();
+  const { currentRoom, setCurrentRoom, setUser, user } = useAuthStore();
 
+  const [roomContext, setRoomContext] = useState<Room | null>(currentRoom?.roomId === roomId ? currentRoom : null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [conflictMap, setConflictMap] = useState<ConflictMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copyDone, setCopyDone] = useState(false);
 
+  const hydrateSessionUser = useEffectEvent(async () => {
+    if (user) {
+      return user;
+    }
+
+    try {
+      const res = await authApi.me();
+      const fetchedUser = res.data?.data?.user ?? null;
+      if (fetchedUser) {
+        setUser(fetchedUser);
+      }
+      return fetchedUser;
+    } catch {
+      return null;
+    }
+  });
+
+  const hydrateRoomContext = useEffectEvent(async () => {
+    const roomRes = await roomApi.getById(roomId);
+    const roomData = roomRes.data?.data;
+
+    if (!roomData) {
+      throw new Error('room_not_found');
+    }
+
+    const normalizedRoom = normalizeRoomSummary(roomData);
+    setRoomContext(normalizedRoom);
+    setCurrentRoom(normalizedRoom);
+
+    return normalizedRoom;
+  });
+
   const loadData = useEffectEvent(async () => {
     setLoading(true);
+    setError('');
     try {
+      await Promise.all([
+        hydrateSessionUser(),
+        hydrateRoomContext(),
+      ]);
+
       const memberRes = await roomApi.getMembers(roomId);
       const fetchedMembers = (memberRes.data?.data?.members ?? []) as RoomMember[];
       setMembers(fetchedMembers);
@@ -114,7 +154,11 @@ export default function ConflictPage() {
   }, [roomId]);
 
   function copyShareLink() {
-    const code = currentRoom?.shareCode ?? 'DEMO001';
+    const code = roomContext?.shareCode;
+    if (!code) {
+      setError('초대 링크를 다시 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
     const url = `${window.location.origin}/join/${code}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopyDone(true);
@@ -131,7 +175,7 @@ export default function ConflictPage() {
     );
   }
 
-  if (!loading && error) {
+  if (error) {
     return (
       <div className="app-shell app-page items-center justify-center">
         <div className="app-alert app-alert-danger max-w-sm">
@@ -145,7 +189,9 @@ export default function ConflictPage() {
   const completedMembers = members.filter((m) => m.tptiCompleted && m.scores);
   const pendingMembers = members.filter((m) => !m.tptiCompleted);
   const isReady = completedMembers.length >= 2;
-  const isHost = user ? members.find((m) => m.userId === user.id)?.role === 'host' : false;
+  const isHost = user
+    ? members.find((m) => m.userId === user.id)?.role === 'host' || roomContext?.hostUserId === user.id
+    : false;
 
   const chartData = completedMembers.map((m, i) => ({
     userId: m.userId,
@@ -162,8 +208,8 @@ export default function ConflictPage() {
         </button>
         <div className="min-w-0 flex-1 text-center">
           <div className="app-topbar-title">그룹 갈등 지도</div>
-          {currentRoom && (
-            <div className="app-topbar-meta">{currentRoom.destination} · {formatTripDateRange(currentRoom.tripStartDate, currentRoom.tripEndDate, currentRoom.tripDate)} · 참여 {members.length}명</div>
+          {roomContext && (
+            <div className="app-topbar-meta">{roomContext.destination} · {formatTripDateRange(roomContext.tripStartDate, roomContext.tripEndDate, roomContext.tripDate)} · 참여 {members.length}명</div>
           )}
         </div>
         <button onClick={copyShareLink} className="app-link-button px-4 py-2 text-sm shrink-0" type="button">

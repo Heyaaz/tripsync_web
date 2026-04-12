@@ -4,14 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TPTI_QUESTIONS, calculateScores, getCharacter } from '@/lib/utils/tpti';
 import { useAuthStore } from '@/lib/store/auth';
-import { tptiApi } from '@/lib/api/client';
+import { authApi, tptiApi } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/utils/error';
 import type { TptiResult } from '@/lib/types';
 
 type Step = 'intro' | 'questions' | 'submitting';
 
 export default function TptiPage() {
   const router = useRouter();
-  const { user, setTptiResult } = useAuthStore();
+  const { setTptiResult, setUser, user } = useAuthStore();
   const [step, setStep] = useState<Step>('intro');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<number[]>(Array(8).fill(0));
@@ -35,8 +36,34 @@ export default function TptiPage() {
     }, 400);
   }
 
+  async function handleStart() {
+    if (!user && nickname.trim().length < 2) {
+      setError('닉네임을 2자 이상 입력해주세요');
+      return;
+    }
+
+    setError('');
+
+    if (!user) {
+      try {
+        const res = await authApi.guest({ nickname: nickname.trim() });
+        const userData = res.data?.data?.user;
+        if (!userData) {
+          throw new Error('guest_session_missing');
+        }
+        setUser(userData);
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, '검사용 게스트 세션을 만들지 못했습니다. 다시 시도해주세요.'));
+        return;
+      }
+    }
+
+    setStep('questions');
+  }
+
   async function handleSubmit(finalAnswers: number[]) {
     setStep('submitting');
+    setError('');
     const scores = calculateScores(finalAnswers);
     const char = getCharacter(scores);
 
@@ -54,8 +81,13 @@ export default function TptiPage() {
       if (res.data?.data) {
         result.resultId = res.data.data.resultId;
       }
-    } catch {
-      // 로컬 fallback
+      if (result.resultId <= 0) {
+        throw new Error('missing_result_id');
+      }
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'TPTI 결과를 저장하지 못했습니다. 다시 시도해주세요.'));
+      setStep('intro');
+      return;
     }
 
     setTptiResult(result);
@@ -143,18 +175,15 @@ export default function TptiPage() {
                       onChange={(e) => setNickname(e.target.value)}
                       maxLength={12}
                     />
-                    {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
                   </div>
                 )}
+
+                {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
 
                 <button
                   className="btn-primary w-full sm:w-auto"
                   onClick={() => {
-                    if (!user && nickname.trim().length < 2) {
-                      setError('닉네임을 2자 이상 입력해주세요');
-                      return;
-                    }
-                    setStep('questions');
+                    void handleStart();
                   }}
                 >
                   검사 시작하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>

@@ -9,7 +9,7 @@ import { formatTripDateRange, parseTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
 import type { TptiResult } from '@/lib/types';
 
-type Step = 'loading' | 'intro' | 'nickname' | 'tpti' | 'submitting' | 'done';
+type Step = 'loading' | 'intro' | 'tpti' | 'submitting' | 'done';
 
 const AXIS_KR: Record<string, string> = { mobility: '활동성', photo: '기록', budget: '예산', theme: '테마' };
 const AXIS_ICON: Record<string, string> = { 
@@ -47,7 +47,22 @@ export default function JoinPage() {
   const [error, setError] = useState('');
   const autoJoinAttemptRef = useRef<string | null>(null);
 
+  async function retryJoinWithSavedResult(resultId: number) {
+    setError('');
+    setStep('submitting');
+
+    try {
+      await roomApi.join(shareCode, { tptiResultId: resultId });
+      setStep('done');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '여행 방 합류에 실패했습니다. 다시 시도해주세요.'));
+      setStep('intro');
+    }
+  }
+
   const loadRoom = useEffectEvent(async () => {
+    setError('');
+
     try {
       const res = await roomApi.getByShareCode(shareCode);
       const data = res.data?.data;
@@ -80,13 +95,13 @@ export default function JoinPage() {
         setStep('submitting');
         try {
           await roomApi.join(shareCode, { tptiResultId: tptiResult.resultId });
-        } catch {
-          // 이미 방에 참여한 경우나 네트워크가 불안정한 경우에도 이후 흐름은 유지한다.
+        } catch (err: unknown) {
+          setError(getApiErrorMessage(err, '저장된 결과로 다시 합류하지 못했습니다. 한 번 더 시도해주세요.'));
+          setStep('intro');
+          return;
         }
       }
       setStep('done');
-    } else if (user && tptiResult) {
-      setStep('tpti');
     } else if (user) {
       setStep('tpti');
     } else {
@@ -127,6 +142,7 @@ export default function JoinPage() {
 
   async function handleTptiSubmit(finalAnswers: number[]) {
     setStep('submitting');
+    setError('');
     const scores = calculateScores(finalAnswers);
     const char = getCharacter(scores);
     const result: TptiResult = {
@@ -140,13 +156,16 @@ export default function JoinPage() {
     try {
       const res = await tptiApi.submit({ answers: finalAnswers });
       if (res.data?.data) result.resultId = res.data.data.resultId;
-      if (result.resultId > 0) {
-        await roomApi.join(shareCode, { tptiResultId: result.resultId });
+      if (result.resultId <= 0) {
+        throw new Error('missing_result_id');
       }
-    } catch {
-      // local demo
+      setTptiResult(result);
+      await roomApi.join(shareCode, { tptiResultId: result.resultId });
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '검사 결과를 저장하거나 방에 합류하지 못했습니다. 다시 시도해주세요.'));
+      setStep('intro');
+      return;
     }
-    setTptiResult(result);
     setStep('done');
   }
 
@@ -158,7 +177,7 @@ export default function JoinPage() {
     );
   }
 
-  if (step === 'intro' || step === 'nickname') {
+  if (step === 'intro') {
     return (
       <div className="app-shell app-page">
         <div className="app-content flex flex-col justify-center min-h-[100dvh] py-24">
@@ -211,23 +230,52 @@ export default function JoinPage() {
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <iconify-icon icon="solar:user-rounded-bold-duotone" className="text-zinc-500"></iconify-icon>
-                    <label className="text-sm font-medium text-zinc-700">내 닉네임 설정</label>
+                    <label className="text-sm font-medium text-zinc-700">{user ? '현재 참여 상태' : '내 닉네임 설정'}</label>
                   </div>
-                  <p className="text-sm font-normal text-zinc-700 mb-3">동행자가 알아볼 수 있는 이름으로 입력해 주세요.</p>
-                  <input
-                    className="input-field"
-                    placeholder="동행자가 알아볼 수 있는 닉네임"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    maxLength={12}
-                    onKeyDown={(e) => e.key === 'Enter' && handleNicknameSubmit()}
-                  />
+                  {user ? (
+                    <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-4">
+                      <p className="text-sm font-medium text-zinc-900">{user.nickname}님으로 합류 상태를 다시 확인할 수 있어요.</p>
+                      <p className="mt-2 text-sm font-normal text-zinc-700 leading-relaxed">
+                        {tptiResult?.resultId
+                          ? '저장된 TPTI 결과를 사용해 방 참여를 다시 시도합니다.'
+                          : '저장된 TPTI 결과가 없어 검사를 다시 진행해야 합니다.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-normal text-zinc-700 mb-3">동행자가 알아볼 수 있는 이름으로 입력해 주세요.</p>
+                      <input
+                        className="input-field"
+                        placeholder="동행자가 알아볼 수 있는 닉네임"
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        maxLength={12}
+                        onKeyDown={(e) => e.key === 'Enter' && handleNicknameSubmit()}
+                      />
+                    </>
+                  )}
                   {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
                 </div>
 
-                <button className="btn-primary w-full" onClick={handleNicknameSubmit}>
-                  TPTI 검사하고 방 합류하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
-                </button>
+                {user ? (
+                  <button
+                    className="btn-primary w-full"
+                    onClick={() => {
+                      if (tptiResult?.resultId) {
+                        void retryJoinWithSavedResult(tptiResult.resultId);
+                        return;
+                      }
+                      setError('');
+                      setStep('tpti');
+                    }}
+                  >
+                    {tptiResult?.resultId ? '저장된 결과로 다시 합류하기' : 'TPTI 검사 다시 진행하기'} <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                  </button>
+                ) : (
+                  <button className="btn-primary w-full" onClick={handleNicknameSubmit}>
+                    TPTI 검사하고 방 합류하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -271,6 +319,12 @@ export default function JoinPage() {
                 <h2 className="text-[28px] md:text-[38px] font-black tracking-tight mb-10 leading-snug text-zinc-900">
                   {q.text}
                 </h2>
+
+                {error && (
+                  <div className="mb-5 rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    {error}
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-3">
                   {LIKERT_OPTIONS.map((opt) => {

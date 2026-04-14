@@ -5,11 +5,18 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, tptiApi, roomApi } from '@/lib/api/client';
 import { TPTI_QUESTIONS, calculateScores, getCharacter } from '@/lib/utils/tpti';
-import { formatTripDateRange, parseTripDateRange } from '@/lib/utils/date';
+import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
-import type { TptiResult } from '@/lib/types';
+import { normalizeRoomSummary } from '@/lib/utils/room';
+import type { Room, TptiResult } from '@/lib/types';
 
 type Step = 'loading' | 'intro' | 'tpti' | 'submitting' | 'done';
+type JoinRoomInfo = Pick<
+  Room,
+  'roomId' | 'destination' | 'tripDate' | 'tripStartDate' | 'tripEndDate' | 'memberCount'
+> & {
+  hostNickname: string;
+};
 
 const AXIS_KR: Record<string, string> = { mobility: '활동성', photo: '기록', budget: '예산', theme: '테마' };
 const AXIS_ICON: Record<string, string> = { 
@@ -38,9 +45,7 @@ export default function JoinPage() {
   const { user, tptiResult, setUser, setTptiResult, setCurrentRoom } = useAuthStore();
 
   const [step, setStep] = useState<Step>('loading');
-  const [roomInfo, setRoomInfo] = useState<{
-    roomId: number; destination: string; tripDate: string; tripStartDate?: string; tripEndDate?: string; hostNickname: string; memberCount: number;
-  } | null>(null);
+  const [roomInfo, setRoomInfo] = useState<JoinRoomInfo | null>(null);
   const [nickname, setNickname] = useState('');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<number[]>(Array(8).fill(0));
@@ -67,19 +72,30 @@ export default function JoinPage() {
       const res = await roomApi.getByShareCode(shareCode);
       const data = res.data?.data;
       if (data) {
-        const parsedRange = parseTripDateRange(data.tripDate);
-        setRoomInfo(data);
-        setCurrentRoom({
+        const normalizedRoom = normalizeRoomSummary({
           roomId: data.roomId,
           destination: data.destination,
-          tripDate: formatTripDateRange(data.tripStartDate ?? parsedRange.tripStartDate, data.tripEndDate ?? parsedRange.tripEndDate, data.tripDate),
-          tripStartDate: data.tripStartDate ?? parsedRange.tripStartDate,
-          tripEndDate: data.tripEndDate ?? parsedRange.tripEndDate,
+          tripDate: data.tripDate,
+          tripStartDate: data.tripStartDate,
+          tripEndDate: data.tripEndDate,
           shareCode,
           status: data.status,
           hostUserId: 0,
           memberCount: data.memberCount,
           createdAt: new Date().toISOString(),
+        });
+        setRoomInfo({
+          ...data,
+          tripStartDate: normalizedRoom.tripStartDate,
+          tripEndDate: normalizedRoom.tripEndDate,
+        });
+        setCurrentRoom({
+          ...normalizedRoom,
+          tripDate: formatTripDateRange(
+            normalizedRoom.tripStartDate,
+            normalizedRoom.tripEndDate,
+            normalizedRoom.tripDate,
+          ),
         });
       }
     } catch (err: unknown) {

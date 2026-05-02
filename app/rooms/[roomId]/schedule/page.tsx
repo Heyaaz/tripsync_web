@@ -364,6 +364,54 @@ export default function SchedulePage() {
                     {opt.summary}
                   </p>
 
+                  {opt.personaValidation && (
+                    <div className="ml-7 mb-5">
+                      <div className="bg-blue-50 border border-blue-200 rounded-[16px] px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <iconify-icon icon="solar:users-group-rounded-bold-duotone" className="text-blue-500" width="18"></iconify-icon>
+                          <span className="text-sm font-bold text-blue-700">
+                            비슷한 여행자 참고군 {opt.personaValidation.matchedPersonaCount}명
+                          </span>
+                          <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                            {opt.personaValidation.personaAcceptanceScore}점
+                          </span>
+                        </div>
+
+                        {opt.personaValidation.topPositiveSignals.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {opt.personaValidation.topPositiveSignals.map((signal, idx) => (
+                              <span key={idx} className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                                ✓ {signal}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {opt.personaValidation.objectionReasons.length > 0 && (
+                          <div className="space-y-1">
+                            {opt.personaValidation.objectionReasons.map((reason, idx) => (
+                              <p key={idx} className="text-xs text-amber-700 flex items-start gap-1">
+                                <span className="shrink-0">⚠</span>
+                                {reason}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+
+                        {opt.personaValidation.persuasionPoints.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-blue-200 space-y-1">
+                            {opt.personaValidation.persuasionPoints.map((point, idx) => (
+                              <p key={idx} className="text-xs text-blue-600 flex items-start gap-1">
+                                <span className="shrink-0">💡</span>
+                                {point}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="ml-7 flex flex-col gap-2.5">
                     {opt.satisfactionByUser.map((s, i) => (
                       <SatisfactionBar key={s.userId} score={s.score} nickname={s.nickname ?? `멤버${i + 1}`} color={MEMBER_COLORS[i % MEMBER_COLORS.length]} />

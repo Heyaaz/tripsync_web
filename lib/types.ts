@@ -135,12 +135,23 @@ export interface ScheduleSlot {
 
 export type OptionType = 'balanced' | 'individual' | 'discovery' | 'manual';
 
+export interface PersonaValidation {
+  source: 'synthetic_research';
+  dataset: string;
+  personaAcceptanceScore: number;
+  matchedPersonaCount: number;
+  topPositiveSignals: string[];
+  objectionReasons: string[];
+  persuasionPoints: string[];
+}
+
 export interface ScheduleOption {
   scheduleId?: number;
   optionType: OptionType;
   label: string;
   summary: string;
   groupSatisfaction: number;
+  personaValidation?: PersonaValidation | null;
   satisfactionByUser: Array<{ userId: number; nickname?: string; score: number }>;
   slots?: ScheduleSlot[];
 }
@@ -153,6 +164,7 @@ export interface Schedule {
   version: number;
   groupSatisfaction: number;
   summary: string;
+  personaValidation?: PersonaValidation | null;
   slots: ScheduleSlot[];
   satisfactionByUser: Array<{ userId: number; nickname?: string; score: number }>;
   optionType?: OptionType;

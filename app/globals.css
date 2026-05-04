@@ -757,6 +757,12 @@ body {
   color: #047857;
 }
 
+.app-alert-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
 .app-sticky-cta {
   position: fixed;
   left: 0;

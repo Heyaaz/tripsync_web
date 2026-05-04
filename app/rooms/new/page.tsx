@@ -3,17 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
-import { authApi, roomApi } from '@/lib/api/client';
+import { authApi, roomApi, tptiApi } from '@/lib/api/client';
 import { formatTripDateRange, isValidDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
+import { getCharacter } from '@/lib/utils/tpti';
 
 export default function RoomsNewPage() {
   const router = useRouter();
-  const { user, tptiResult, setUser, setCurrentRoom } = useAuthStore();
-  const [step, setStep] = useState<'auth' | 'form'>(user ? 'form' : 'auth');
+  const { user, tptiResult, setUser, setTptiResult, setCurrentRoom } = useAuthStore();
+  const userId = user?.id;
+  const userIsGuest = user?.isGuest;
+  const canHostRoom = Boolean(userId && !userIsGuest);
+  const [step, setStep] = useState<'auth' | 'form'>(canHostRoom ? 'form' : 'auth');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [oauthSyncing, setOauthSyncing] = useState(false);
+  const [tptiSyncing, setTptiSyncing] = useState(false);
   const [error, setError] = useState('');
 
   // Auth form
@@ -53,6 +58,13 @@ export default function RoomsNewPage() {
     e.preventDefault();
     if (!tripStartDate || !tripEndDate) { setError('여행 기간을 선택해주세요'); return; }
     if (!isValidDateRange(tripStartDate, tripEndDate)) { setError('종료일은 시작일보다 빠를 수 없습니다'); return; }
+    if (!user || user.isGuest) {
+      setUser(null);
+      setStep('auth');
+      setAuthMode('login');
+      setError('여행방을 만들려면 방장 계정으로 로그인하거나 새 계정을 만들어주세요.');
+      return;
+    }
     setLoading(true);
     setError('');
     const tripDateLabel = formatTripDateRange(tripStartDate, tripEndDate);
@@ -75,7 +87,15 @@ export default function RoomsNewPage() {
         router.push(`/rooms/${roomData.roomId}/conflict`);
       }
     } catch (err: unknown) {
-      setError(getApiErrorMessage(err, '방 생성에 실패했습니다. 다시 시도해주세요.'));
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403) {
+        setUser(null);
+        setStep('auth');
+        setAuthMode('login');
+        setError('세션이 만료되었거나 방장 계정이 아닙니다. 로그인 후 다시 진행해주세요.');
+      } else {
+        setError(getApiErrorMessage(err, '방 생성에 실패했습니다. 다시 시도해주세요.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -86,8 +106,102 @@ export default function RoomsNewPage() {
   const minDate = tomorrow.toISOString().split('T')[0];
 
   useEffect(() => {
-    setStep(user ? 'form' : 'auth');
-  }, [user]);
+    setStep(canHostRoom ? 'form' : 'auth');
+    if (userIsGuest) {
+      setError('동행자/게스트 세션으로는 방을 만들 수 없습니다. 방장 계정으로 로그인하거나 새 계정을 만들어주세요.');
+    }
+  }, [canHostRoom, userIsGuest]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncExistingSession() {
+      if (!userId || userIsGuest) {
+        return;
+      }
+
+      try {
+        const res = await authApi.me();
+        const serverUser = res.data?.data?.user;
+        if (cancelled) return;
+
+        if (!serverUser || serverUser.isGuest) {
+          setUser(null);
+          setTptiResult(null);
+          setStep('auth');
+          setError('방장 세션을 확인하지 못했습니다. 로그인 후 다시 진행해주세요.');
+          return;
+        }
+
+        setUser(serverUser);
+        setStep('form');
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          setTptiResult(null);
+          setStep('auth');
+          setError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+        }
+      }
+    }
+
+    void syncExistingSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setTptiResult, setUser, userId, userIsGuest]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncLatestTptiResult() {
+      if (!userId || userIsGuest) {
+        setTptiSyncing(false);
+        if (userIsGuest) setTptiResult(null);
+        return;
+      }
+
+      setTptiSyncing(true);
+
+      try {
+        const res = await tptiApi.getResult(userId);
+        const data = res.data?.data;
+        if (cancelled) return;
+
+        if (!data?.scores) {
+          setTptiResult(null);
+          return;
+        }
+
+        const scores = data.scores;
+        const character = getCharacter(scores);
+        setTptiResult({
+          resultId: data.resultId,
+          userId: data.userId ?? userId,
+          nickname: data.nickname ?? user?.nickname,
+          scores,
+          characterName: data.characterName,
+          characterEmoji: character.emoji,
+          createdAt: data.createdAt,
+        });
+      } catch {
+        if (!cancelled) {
+          setTptiResult(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setTptiSyncing(false);
+        }
+      }
+    }
+
+    void syncLatestTptiResult();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setTptiResult, user?.nickname, userId, userIsGuest]);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,16 +413,6 @@ export default function RoomsNewPage() {
                     >
                       {authMode === 'login' ? '새로운 계정 만들기' : '이미 계정이 있으신가요?'}
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setUser({ id: 1, nickname: '방장', email: 'demo@tripsync.app', isGuest: false, authProvider: 'local' });
-                        setStep('form');
-                      }}
-                      className="text-sm font-normal text-zinc-700 hover:text-zinc-900 transition-colors"
-                    >
-                      데모 모드로 건너뛰기
-                    </button>
                   </div>
                 </div>
               ) : (
@@ -357,7 +461,17 @@ export default function RoomsNewPage() {
                     <p className="text-sm font-normal text-zinc-700 mt-3">하루 일정부터 여러 날 여행까지 기간을 직접 지정할 수 있습니다.</p>
                   </div>
 
-                    {!tptiResult && (
+                    {tptiSyncing && (
+                      <div className="app-alert app-alert-info">
+                        <iconify-icon icon="solar:refresh-bold-duotone" width="20" className="shrink-0 mt-0.5"></iconify-icon>
+                        <div className="w-full">
+                          <p className="text-sm font-bold mb-1">저장된 TPTI 결과 확인 중</p>
+                          <p className="text-sm font-normal leading-relaxed">서버에 저장된 방장 TPTI 결과를 불러오고 있습니다.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {!tptiSyncing && !tptiResult && (
                       <div className="app-alert app-alert-warning">
                         <iconify-icon icon="solar:info-circle-bold-duotone" width="20" className="shrink-0 mt-0.5"></iconify-icon>
                         <div className="w-full">

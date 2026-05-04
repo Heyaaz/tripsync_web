@@ -8,6 +8,7 @@ type Props = {
   initialOrderIndex?: number;
   scheduleTitle?: string;
   scheduleSummary?: string;
+  onReorder?: (slots: ScheduleSlot[]) => void;
 };
 
 type ScheduleSlotWithCoordinates = ScheduleSlot & {
@@ -68,6 +69,11 @@ function hasCoordinates(slot: ScheduleSlot): slot is ScheduleSlotWithCoordinates
   return Number.isFinite(slot.place.latitude) && Number.isFinite(slot.place.longitude);
 }
 
+function buildKakaoMapUrl(slot: ScheduleSlotWithCoordinates) {
+  const encodedName = encodeURIComponent(slot.place.name);
+  return `https://map.kakao.com/link/map/${encodedName},${slot.place.latitude},${slot.place.longitude}`;
+}
+
 function loadKakaoMapsSdk(appKey: string) {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Kakao Maps SDK can only load in the browser.'));
@@ -121,16 +127,6 @@ function loadKakaoMapsSdk(appKey: string) {
   return kakaoMapsSdkPromise;
 }
 
-function formatSlotTime(slot: ScheduleSlot) {
-  const start = slot.startTime ? new Date(slot.startTime) : null;
-  const end = slot.endTime ? new Date(slot.endTime) : null;
-  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return '세부 시간 조정 예정';
-  }
-  const toText = (value: Date) => `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
-  return `${toText(start)} - ${toText(end)}`;
-}
-
 function createMarkerBadge(orderIndex: number, selected: boolean, onClick: () => void) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -158,6 +154,7 @@ export default function ScheduleMapModalView({
   initialOrderIndex,
   scheduleTitle,
   scheduleSummary,
+  onReorder,
 }: Props) {
   const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY;
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -165,30 +162,60 @@ export default function ScheduleMapModalView({
   const markersRef = useRef<KakaoMarkerInstance[]>([]);
   const overlaysRef = useRef<KakaoOverlayInstance[]>([]);
   const hasFitBoundsRef = useRef(false);
+  const [orderedSlots, setOrderedSlots] = useState<ScheduleSlot[]>(slots);
 
   const slotsWithCoords = useMemo(
-    () => slots.filter(hasCoordinates),
-    [slots],
+    () => orderedSlots.filter(hasCoordinates),
+    [orderedSlots],
   );
-  const missingCoordsCount = slots.length - slotsWithCoords.length;
+  const isSingleSlotView = orderedSlots.length === 1;
+  const missingCoordsCount = orderedSlots.length - slotsWithCoords.length;
   const slotSignature = useMemo(
-    () => slots.map((slot) => `${slot.orderIndex}:${slot.place.latitude ?? 'x'}:${slot.place.longitude ?? 'x'}`).join('|'),
-    [slots],
+    () => orderedSlots.map((slot) => `${slot.orderIndex}:${slot.place.latitude ?? 'x'}:${slot.place.longitude ?? 'x'}`).join('|'),
+    [orderedSlots],
   );
 
   const [selectedOrderIndex, setSelectedOrderIndex] = useState<number | null>(null);
   const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const fallbackOrderIndex = initialOrderIndex ?? slotsWithCoords[0]?.orderIndex ?? slots[0]?.orderIndex ?? 1;
+  const fallbackOrderIndex = initialOrderIndex ?? slotsWithCoords[0]?.orderIndex ?? orderedSlots[0]?.orderIndex ?? 1;
 
   useEffect(() => {
     hasFitBoundsRef.current = false;
   }, [slotSignature]);
 
   const selectedSlot =
-    slots.find((slot) => slot.orderIndex === (selectedOrderIndex ?? fallbackOrderIndex))
+    orderedSlots.find((slot) => slot.orderIndex === (selectedOrderIndex ?? fallbackOrderIndex))
     ?? slotsWithCoords[0]
-    ?? slots[0]
+    ?? orderedSlots[0]
     ?? null;
+  const selectedDisplayIndex = selectedSlot
+    ? orderedSlots.findIndex((slot) => slot.orderIndex === selectedSlot.orderIndex) + 1
+    : 0;
+
+  function moveSlot(fromIndex: number, direction: -1 | 1) {
+    const toIndex = fromIndex + direction;
+    if (toIndex < 0 || toIndex >= orderedSlots.length) {
+      return;
+    }
+
+    const next = [...orderedSlots];
+    const [target] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, target);
+    setOrderedSlots(next);
+    onReorder?.(next);
+    hasFitBoundsRef.current = false;
+  }
+
+  function moveSelectedSlot(direction: -1 | 1) {
+    if (!selectedSlot) {
+      return;
+    }
+
+    const currentIndex = orderedSlots.findIndex((slot) => slot.orderIndex === selectedSlot.orderIndex);
+    if (currentIndex >= 0) {
+      moveSlot(currentIndex, direction);
+    }
+  }
 
   useEffect(() => {
     if (!appKey || !mapContainerRef.current || slotsWithCoords.length === 0) {
@@ -224,6 +251,7 @@ export default function ScheduleMapModalView({
         const bounds = new kakao.maps.LatLngBounds();
 
         slotsWithCoords.forEach((slot) => {
+          const displayIndex = orderedSlots.findIndex((orderedSlot) => orderedSlot.orderIndex === slot.orderIndex) + 1;
           const position = new kakao.maps.LatLng(slot.place.latitude, slot.place.longitude);
           bounds.extend(position);
 
@@ -243,7 +271,7 @@ export default function ScheduleMapModalView({
             position,
             yAnchor: 1.6,
             content: createMarkerBadge(
-              slot.orderIndex,
+              displayIndex,
               slot.orderIndex === selectedCoordinateSlot.orderIndex,
               () => setSelectedOrderIndex(slot.orderIndex),
             ),
@@ -277,17 +305,17 @@ export default function ScheduleMapModalView({
     return () => {
       cancelled = true;
     };
-  }, [appKey, fallbackOrderIndex, selectedOrderIndex, slotsWithCoords]);
+  }, [appKey, fallbackOrderIndex, orderedSlots, selectedOrderIndex, slotsWithCoords]);
 
   return (
-    <div className="flex h-full flex-col bg-zinc-50">
-      <div className="border-b border-zinc-100 bg-white px-5 py-4">
+    <div className="flex h-full min-h-0 flex-col bg-zinc-50">
+      <div className="shrink-0 border-b border-zinc-100 bg-white px-5 py-4">
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-            일정 전체 지도
+            {isSingleSlotView ? '선택 코스 지도' : '일정 전체 지도'}
           </span>
           <span className="text-[12px] font-medium text-zinc-500">
-            총 {slots.length}개 코스
+            총 {orderedSlots.length}개 코스
           </span>
         </div>
         {scheduleTitle ? <h4 className="text-base font-bold text-zinc-900">{scheduleTitle}</h4> : null}
@@ -299,7 +327,7 @@ export default function ScheduleMapModalView({
         ) : null}
       </div>
 
-      <div className="relative min-h-[260px] flex-1 bg-zinc-100">
+      <div className="relative min-h-[220px] flex-1 bg-zinc-100">
         {!appKey ? (
           <div className="flex h-full items-center justify-center p-6">
             <div className="max-w-xs rounded-[22px] border border-zinc-200 bg-white px-5 py-6 text-center shadow-sm">
@@ -344,55 +372,138 @@ export default function ScheduleMapModalView({
         )}
       </div>
 
-      <div className="border-t border-zinc-100 bg-white px-4 py-4">
+      <div className="max-h-[34dvh] shrink-0 overflow-y-auto border-t border-zinc-100 bg-white px-4 py-3">
         {selectedSlot ? (
-          <div className="mb-3 rounded-[20px] border border-blue-100 bg-blue-50/70 px-4 py-3">
-            <div className="mb-1 flex items-center gap-2">
+          <div className="mb-3 rounded-[18px] border border-blue-100 bg-blue-50/70 px-3 py-3">
+            <div className="flex items-start gap-2">
               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 text-[11px] font-bold text-white">
-                {selectedSlot.orderIndex}
+                {selectedDisplayIndex}
               </span>
-              <p className="text-sm font-bold text-zinc-900">{selectedSlot.place.name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-zinc-900">{selectedSlot.place.name}</p>
+                <p className="mt-0.5 truncate text-xs font-normal text-zinc-700">{selectedSlot.place.address}</p>
+              </div>
             </div>
-            <p className="text-sm font-normal text-zinc-700">{selectedSlot.place.address}</p>
-            <p className="mt-1 text-[12px] font-medium text-zinc-500">{formatSlotTime(selectedSlot)}</p>
+            {!isSingleSlotView ? (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[11px] font-semibold text-zinc-500">순서</span>
+                <button
+                  type="button"
+                  disabled={selectedDisplayIndex <= 1}
+                  onClick={() => moveSelectedSlot(-1)}
+                  className={`rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${
+                    selectedDisplayIndex <= 1
+                      ? 'cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-300'
+                      : 'border-blue-100 bg-white text-blue-700 hover:bg-blue-50'
+                  }`}
+                >
+                  ↑ 앞으로
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedDisplayIndex >= orderedSlots.length}
+                  onClick={() => moveSelectedSlot(1)}
+                  className={`rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${
+                    selectedDisplayIndex >= orderedSlots.length
+                      ? 'cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-300'
+                      : 'border-blue-100 bg-white text-blue-700 hover:bg-blue-50'
+                  }`}
+                >
+                  ↓ 뒤로
+                </button>
+              </div>
+            ) : null}
+            {hasCoordinates(selectedSlot) ? (
+              <a
+                href={buildKakaoMapUrl(selectedSlot)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-white px-2.5 py-1.5 text-[11px] font-bold text-blue-700 transition hover:bg-blue-50"
+              >
+                <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
+                카카오맵에서 열기
+              </a>
+            ) : null}
           </div>
         ) : null}
 
-        <div className="max-h-[160px] space-y-2 overflow-y-auto pr-1">
-          {slots.map((slot) => {
-            const isSelected = slot.orderIndex === selectedOrderIndex;
-            const isDisabled = !hasCoordinates(slot);
+        {!isSingleSlotView ? (
+          <div className="max-h-[96px] space-y-1.5 overflow-y-auto pr-1">
+            {orderedSlots.map((slot, index) => {
+              const isSelected = slot.orderIndex === selectedOrderIndex;
+              const isDisabled = !hasCoordinates(slot);
 
-            return (
-              <button
-                key={slot.orderIndex}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => setSelectedOrderIndex(slot.orderIndex)}
-                className={`flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
-                  isSelected
-                    ? 'border-blue-200 bg-blue-50'
+              return (
+                <div
+                  key={slot.orderIndex}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedOrderIndex(slot.orderIndex)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedOrderIndex(slot.orderIndex);
+                    }
+                  }}
+                  className={`flex w-full items-start gap-2 rounded-[16px] border px-2.5 py-2 text-left transition ${
+                    isSelected
+                      ? 'border-blue-200 bg-blue-50'
                     : isDisabled
                       ? 'border-zinc-200 bg-zinc-50 opacity-70'
-                      : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
-                }`}
-              >
-                <span className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
-                  isSelected ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-zinc-700'
-                }`}>
-                  {slot.orderIndex}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-zinc-900">{slot.place.name}</span>
-                  <span className="mt-0.5 block text-sm font-normal leading-relaxed text-zinc-700">{slot.place.address}</span>
-                </span>
-                <span className="shrink-0 text-[11px] font-semibold text-zinc-500">
-                  {isDisabled ? '좌표 없음' : formatSlotTime(slot)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                        : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
+                  }`}
+                >
+                  <span className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                    isSelected ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-zinc-700'
+                  }`}>
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-bold text-zinc-900">{slot.place.name}</span>
+                    <span className="mt-0.5 block truncate text-xs font-normal text-zinc-700">{slot.place.address}</span>
+                  </span>
+                  <span className="flex shrink-0 flex-col gap-1">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      aria-label={`${slot.place.name} 앞으로 이동`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        moveSlot(index, -1);
+                      }}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${
+                        index === 0
+                          ? 'cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-300'
+                          : 'border-zinc-200 bg-white text-zinc-600 hover:border-blue-200 hover:text-blue-600'
+                      }`}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === orderedSlots.length - 1}
+                      aria-label={`${slot.place.name} 뒤로 이동`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        moveSlot(index, 1);
+                      }}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${
+                        index === orderedSlots.length - 1
+                          ? 'cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-300'
+                          : 'border-zinc-200 bg-white text-zinc-600 hover:border-blue-200 hover:text-blue-600'
+                      }`}
+                    >
+                      ↓
+                    </button>
+                  </span>
+                  {isDisabled ? (
+                    <span className="shrink-0 text-[11px] font-semibold text-zinc-500">좌표 없음</span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -122,6 +122,7 @@ export type SlotType = 'common' | 'personal';
 export type ReasonAxis = 'mobility' | 'photo' | 'budget' | 'theme' | 'common';
 
 export interface ScheduleSlot {
+  slotId?: number | null;
   orderIndex: number;
   startTime: string;
   endTime: string;
@@ -138,8 +139,20 @@ export type OptionType = 'balanced' | 'individual' | 'discovery' | 'manual';
 export interface PersonaValidation {
   source: 'synthetic_research';
   dataset: string;
+  summary?: string;
   personaAcceptanceScore: number;
   matchedPersonaCount: number;
+  matchedPersonas?: Array<{
+    matchedUserId: number;
+    similarity: number;
+    personaSummary?: string | null;
+    scores: {
+      mobility: number;
+      photo: number;
+      budget: number;
+      theme: number;
+    };
+  }>;
   topPositiveSignals: string[];
   objectionReasons: string[];
   persuasionPoints: string[];
@@ -179,6 +192,7 @@ export interface PublicShareSchedule {
   optionType: OptionType;
   summary: string;
   groupSatisfaction: number;
+  personaValidation?: PersonaValidation | null;
   slots: Array<{
     orderIndex: number;
     startTime: string;

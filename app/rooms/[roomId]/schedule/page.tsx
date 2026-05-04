@@ -14,16 +14,30 @@ import { MEMBER_COLORS } from '@/components/tpti/TptiRadarChart';
 import { normalizeRoomSummary } from '@/lib/utils/room';
 
 
-function formatTime(iso: string) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 function getProposalStepLabel(index: number) {
   const labels = ['첫 코스', '두 번째 코스', '세 번째 코스', '네 번째 코스', '다섯 번째 코스'];
   return labels[index] ?? `${index + 1}번째 코스`;
+}
+
+const GENERATING_MESSAGES = [
+  '서로의 취향을 맞춰보는 중…',
+  '충남 여행 코스를 정리하는 중…',
+  '사진·예산 취향을 반영하는 중…',
+  '동행자가 함께 만족할 일정을 고르는 중…',
+];
+
+function cleanDisplayText(text?: string | null) {
+  return (text ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && line !== '.')
+    .join(' ')
+    .replace(/([.!?。])로\s*/g, '$1 ')
+    .replace(/개인적 취향에 맞음/g, '개인 취향에 맞습니다')
+    .replace(/개인 취향을 반영하여 갈등을 최소화했습니다[.。]?/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.。]+$/g, '')
+    .trim();
 }
 
 function SatisfactionBar({ score, nickname, color }: { score: number; nickname: string; color: string }) {
@@ -70,6 +84,7 @@ function normalizeConfirmedSchedule(schedule: Schedule): ScheduleOption {
     label: OPTION_LABELS[optionType]?.label ?? '확정 일정',
     summary: schedule.summary,
     groupSatisfaction: schedule.groupSatisfaction,
+    personaValidation: schedule.personaValidation,
     satisfactionByUser: schedule.satisfactionByUser,
     slots: schedule.slots,
   };
@@ -93,6 +108,24 @@ export default function SchedulePage() {
   const [shareScheduleId, setShareScheduleId] = useState<number | null>(null);
   const [detailModalSlot, setDetailModalSlot] = useState<DetailModalState | null>(null);
   const [modalView, setModalView] = useState<'detail' | 'map'>('detail');
+  const [mapScope, setMapScope] = useState<'slot' | 'all'>('slot');
+  const [generatingMessageIndex, setGeneratingMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!detailModalSlot) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    const originalOverscrollBehavior = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'contain';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.overscrollBehavior = originalOverscrollBehavior;
+    };
+  }, [detailModalSlot]);
 
   const hydrateRoomContext = useCallback(async () => {
     const roomRes = await roomApi.getById(roomId);
@@ -113,6 +146,19 @@ export default function SchedulePage() {
       // 화면 진입 시 에러는 생성/확정 액션에서 다시 사용자에게 노출한다.
     });
   }, [hydrateRoomContext]);
+
+  useEffect(() => {
+    if (phase !== 'generating') {
+      setGeneratingMessageIndex(0);
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setGeneratingMessageIndex((current) => (current + 1) % GENERATING_MESSAGES.length);
+    }, 1800);
+
+    return () => window.clearInterval(timer);
+  }, [phase]);
 
   async function handleGenerate() {
     setPhase('generating');
@@ -192,10 +238,11 @@ export default function SchedulePage() {
       accentColor,
       isLocal: !!slot.place.isDepopulationArea,
       scheduleTitle,
-      scheduleSummary,
+      scheduleSummary: cleanDisplayText(scheduleSummary),
       scheduleSlots,
     });
     setModalView('detail');
+    setMapScope('slot');
   }
 
   function openScheduleMap(option: ScheduleOption, scheduleTitle: string) {
@@ -207,10 +254,55 @@ export default function SchedulePage() {
       accentColor: '#2563EB',
       isLocal: !!firstSlot.place.isDepopulationArea,
       scheduleTitle,
-      scheduleSummary: option.summary,
+      scheduleSummary: cleanDisplayText(option.summary),
       scheduleSlots: option.slots,
     });
     setModalView('map');
+    setMapScope('all');
+  }
+
+  function applyConfirmedSlotOrderLocally(nextSlots: ScheduleSlot[]) {
+    setConfirmedOption((current) => current ? { ...current, slots: nextSlots } : current);
+    setSelectedOption((current) => current ? { ...current, slots: nextSlots } : current);
+    setDetailModalSlot((current) => {
+      if (!current) return current;
+      const nextCurrentSlot = nextSlots.find((slot) => slot.orderIndex === current.slot.orderIndex) ?? current.slot;
+      return {
+        ...current,
+        slot: nextCurrentSlot,
+        scheduleSlots: nextSlots,
+      };
+    });
+  }
+
+  function handleConfirmedSlotReorder(nextSlots: ScheduleSlot[]) {
+    applyConfirmedSlotOrderLocally(nextSlots);
+
+    const scheduleId = confirmedOption?.scheduleId ?? shareScheduleId;
+    const slotIds = nextSlots.map((slot) => slot.slotId).filter((slotId): slotId is number => typeof slotId === 'number');
+    if (!scheduleId || slotIds.length !== nextSlots.length) {
+      setError('순서 저장에 필요한 일정 정보를 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
+
+    void scheduleApi.reorderSlots(scheduleId, { slotIds })
+      .then((res) => {
+        const updated = res.data?.data as Schedule | undefined;
+        if (updated) {
+          const normalized = normalizeConfirmedSchedule(updated);
+          const normalizedSlots = normalized.slots ?? nextSlots;
+          setConfirmedOption(normalized);
+          setSelectedOption(normalized);
+          setDetailModalSlot((current) => current ? {
+            ...current,
+            slot: normalizedSlots.find((slot) => slot.slotId === current.slot.slotId) ?? current.slot,
+            scheduleSlots: normalizedSlots,
+          } : current);
+        }
+      })
+      .catch((err) => {
+        setError(getApiErrorMessage(err, '순서 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'));
+      });
   }
 
   // ── PHASE: generate ──────────────────────────────────────
@@ -281,7 +373,9 @@ export default function SchedulePage() {
       <div className="app-shell app-page items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="w-16 h-16 rounded-full border-4 border-zinc-200 border-t-purple-500 animate-spin mb-8" />
-          <h2 className="text-2xl font-bold mb-8 tracking-tight text-zinc-900">수만 가지 조합을 계산 중…</h2>
+          <h2 className="text-2xl font-bold mb-8 tracking-tight text-zinc-900">
+            {GENERATING_MESSAGES[generatingMessageIndex]}
+          </h2>
 
           <div className="w-full max-w-sm space-y-3">
             <div className="p-4 bg-white border border-zinc-200 rounded-[20px] text-sm text-zinc-700 font-normal flex gap-3 items-center shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
@@ -361,7 +455,7 @@ export default function SchedulePage() {
                   </div>
 
                   <p className="text-zinc-700 text-sm font-normal leading-relaxed mb-5 ml-7">
-                    {opt.summary}
+                    {cleanDisplayText(opt.summary)}
                   </p>
 
                   {opt.personaValidation && (
@@ -403,7 +497,7 @@ export default function SchedulePage() {
                             {opt.personaValidation.persuasionPoints.map((point, idx) => (
                               <p key={idx} className="text-xs text-blue-600 flex items-start gap-1">
                                 <span className="shrink-0">💡</span>
-                                {point}
+                                {cleanDisplayText(point)}
                               </p>
                             ))}
                           </div>
@@ -436,7 +530,7 @@ export default function SchedulePage() {
                   <div className="px-5 pb-5 border-t border-zinc-200 pt-5 ml-7">
                     <div className="mb-4 rounded-[18px] bg-zinc-50 border border-zinc-200 px-4 py-3">
                       <p className="text-sm font-normal text-zinc-700 leading-relaxed">
-                        이 옵션은 확정 일정이 아니라 제안안입니다. 세부 시간은 선택 후 조정되고, 아래는 어떤 흐름으로 구성되는지 보여주는 참고안입니다.
+                        이 옵션은 확정 전 비교용 제안안입니다. 아래 코스 흐름을 보고 마음에 드는 일정을 선택해 주세요.
                       </p>
                     </div>
                     <div className="flex flex-col gap-3">
@@ -517,8 +611,7 @@ export default function SchedulePage() {
                         <div>
                           <p className="text-sm font-medium text-zinc-800">제안안은 비교용으로만 확인해 주세요</p>
                           <p className="mt-1 text-sm font-normal text-zinc-700 leading-relaxed">
-                            아직 제안 단계에서는 코스를 직접 추가해도 서버에 저장되지 않습니다. 마음에 드는 옵션을 먼저 고른 뒤,
-                            확정 일정 기준으로 세부 조정을 논의하는 흐름이 더 안전합니다.
+                            코스 추가와 순서 조정은 일정을 확정한 뒤 최종 타임라인에서 확인해 주세요.
                           </p>
                         </div>
                       </div>
@@ -559,9 +652,9 @@ export default function SchedulePage() {
 
         {/* Detail Modal */}
         {detailModalSlot && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
             <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setDetailModalSlot(null)} />
-            <div className="relative bg-white rounded-[24px] w-full max-w-sm overflow-hidden shadow-2xl animate-fadeInUp">
+            <div className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-y-auto rounded-[24px] bg-white shadow-2xl animate-fadeInUp">
               
               <button 
                 onClick={() => setDetailModalSlot(null)}
@@ -626,7 +719,10 @@ export default function SchedulePage() {
                         확인
                       </button>
                       <button 
-                        onClick={() => setModalView('map')}
+                        onClick={() => {
+                          setMapScope('slot');
+                          setModalView('map');
+                        }}
                         className="flex-none px-4 py-3.5 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5"
                       >
                         <iconify-icon icon="solar:map-point-wave-bold-duotone" width="16"></iconify-icon>일정 지도 보기
@@ -635,8 +731,8 @@ export default function SchedulePage() {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col h-[560px]">
-                  <div className="p-4 border-b border-zinc-100 flex items-center gap-3 bg-white relative z-10">
+                <div className="flex h-[calc(100dvh-2rem)] max-h-[640px] min-h-0 flex-col sm:h-[560px]">
+                  <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-zinc-100 bg-white p-4">
                     <button onClick={() => setModalView('detail')} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-100 text-zinc-600 transition-colors">
                       <iconify-icon icon="solar:arrow-left-linear" width="20"></iconify-icon>
                     </button>
@@ -645,9 +741,10 @@ export default function SchedulePage() {
                       <p className="text-xs text-zinc-500 truncate">{detailModalSlot.scheduleSummary}</p>
                     </div>
                   </div>
-                  <div className="flex-1 bg-zinc-100 relative">
+                  <div className="relative min-h-0 flex-1 bg-zinc-100">
                     <ScheduleMapModalView
-                      slots={detailModalSlot.scheduleSlots}
+                      key={`${mapScope}:${detailModalSlot.scheduleSlots.map((slot) => slot.orderIndex).join('-')}:${detailModalSlot.slot.orderIndex}`}
+                      slots={mapScope === 'slot' ? [detailModalSlot.slot] : detailModalSlot.scheduleSlots}
                       initialOrderIndex={detailModalSlot.slot.orderIndex}
                       scheduleTitle={detailModalSlot.scheduleTitle}
                       scheduleSummary={detailModalSlot.scheduleSummary}
@@ -730,7 +827,7 @@ export default function SchedulePage() {
                 </button>
               </div>
               <div className="flex flex-col gap-6">
-                {confirmedOption.slots.map((slot) => {
+                {confirmedOption.slots.map((slot, index) => {
                   const isPersonal = slot.slotType === 'personal';
                   const memberIdx = isPersonal ? confirmedOption.satisfactionByUser.findIndex((m) => m.userId === slot.targetUserId) : -1;
                   const accentColor = memberIdx >= 0 ? MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] : '#10B981';
@@ -753,7 +850,7 @@ export default function SchedulePage() {
                           className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-zinc-200 bg-white group-hover:scale-110 transition-transform shadow-sm"
                           style={{ color: accentColor }}
                         >
-                          {slot.orderIndex}
+                          {index + 1}
                         </div>
                         <div className="w-[1px] h-full bg-zinc-200 my-2" />
                       </div>
@@ -766,15 +863,7 @@ export default function SchedulePage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-zinc-700 mb-3">{slot.place.address}</p>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-zinc-700 tracking-normal">
-                            {formatTime(slot.startTime) && formatTime(slot.endTime)
-                              ? `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`
-                              : '세부 시간 조정 예정'}
-                          </span>
-                        </div>
+                        <p className="text-sm text-zinc-700">{slot.place.address}</p>
                       </div>
                     </button>
                   );
@@ -796,6 +885,120 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
+
+      {detailModalSlot ? (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
+          <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setDetailModalSlot(null)} />
+          <div className={`relative my-auto flex w-full max-w-sm flex-col rounded-[24px] bg-white shadow-2xl animate-fadeInUp ${
+            modalView === 'map'
+              ? 'h-[calc(100dvh-2rem)] max-h-[640px] overflow-hidden sm:h-[560px]'
+              : 'max-h-[calc(100dvh-2rem)] overflow-y-auto'
+          }`}>
+            <button
+              onClick={() => setDetailModalSlot(null)}
+              className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-lg font-light leading-none text-zinc-600 transition-colors hover:bg-zinc-300 hover:text-zinc-900"
+              aria-label="모달 닫기"
+            >
+              ✕
+            </button>
+            {modalView === 'detail' ? (
+              <div className="p-6 pt-10">
+                <div className="mb-3 flex items-center gap-2">
+                  {detailModalSlot.isLocal && (
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-normal text-emerald-700">
+                      로컬 픽
+                    </span>
+                  )}
+                  {detailModalSlot.slot.slotType === 'personal' && detailModalSlot.slot.targetNickname && (
+                    <span
+                      className="rounded-full border px-2.5 py-1 text-[11px] font-normal"
+                      style={{
+                        borderColor: `${detailModalSlot.accentColor}40`,
+                        color: detailModalSlot.accentColor,
+                        backgroundColor: `${detailModalSlot.accentColor}10`,
+                      }}
+                    >
+                      {detailModalSlot.slot.targetNickname} 취향 반영
+                    </span>
+                  )}
+                </div>
+                <h3 className="mb-1 text-xl font-bold text-zinc-900">{detailModalSlot.slot.place.name}</h3>
+                <p className="mb-5 text-sm text-zinc-600">{detailModalSlot.slot.place.address}</p>
+
+                {detailModalSlot.slot.reason ? (
+                  <div className="mb-6 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+                    <p className="flex items-start gap-2 text-sm leading-relaxed text-zinc-700">
+                      <iconify-icon icon="solar:info-circle-bold-duotone" className="mt-0.5 shrink-0 text-lg text-blue-500"></iconify-icon>
+                      {cleanDisplayText(detailModalSlot.slot.reason)}
+                    </p>
+                  </div>
+                ) : null}
+
+                {detailModalSlot.slot.place.description ? (
+                  <div className="mb-8 whitespace-pre-wrap break-keep-all text-[14px] font-normal leading-relaxed text-zinc-700">
+                    {cleanDisplayText(detailModalSlot.slot.place.description)}
+                  </div>
+                ) : (
+                  <div className="mb-8 rounded-lg border border-dashed border-zinc-200 bg-zinc-50 py-3 text-center text-[13px] font-normal leading-relaxed text-zinc-600">
+                    AI 제안 장소입니다. 방문 전 운영 정보를 확인하세요.
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDetailModalSlot(null)}
+                    className="flex-1 rounded-xl bg-zinc-900 py-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-colors hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2"
+                  >
+                    확인
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMapScope('slot');
+                      setModalView('map');
+                    }}
+                    className="flex flex-none items-center justify-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                  >
+                    <iconify-icon icon="solar:map-point-wave-bold-duotone" width="16"></iconify-icon>
+                    일정 지도 보기
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-zinc-100 bg-white p-4">
+                  <button
+                    onClick={() => {
+                      if (mapScope === 'slot') {
+                        setModalView('detail');
+                      } else {
+                        setDetailModalSlot(null);
+                      }
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100"
+                    aria-label="뒤로"
+                  >
+                    <iconify-icon icon="solar:arrow-left-linear" width="20"></iconify-icon>
+                  </button>
+                  <div className="min-w-0 flex-1 pr-8">
+                    <h3 className="truncate text-base font-bold text-zinc-900">{detailModalSlot.scheduleTitle}</h3>
+                    <p className="truncate text-xs text-zinc-500">{detailModalSlot.scheduleSummary}</p>
+                  </div>
+                </div>
+                <div className="relative min-h-0 flex-1 bg-zinc-100">
+                  <ScheduleMapModalView
+                    key={`${mapScope}:${detailModalSlot.scheduleSlots.map((slot) => slot.orderIndex).join('-')}:${detailModalSlot.slot.orderIndex}`}
+                    slots={mapScope === 'slot' ? [detailModalSlot.slot] : detailModalSlot.scheduleSlots}
+                    initialOrderIndex={detailModalSlot.slot.orderIndex}
+                    scheduleTitle={detailModalSlot.scheduleTitle}
+                    scheduleSummary={detailModalSlot.scheduleSummary}
+                    onReorder={mapScope === 'all' && phase === 'confirmed' ? handleConfirmedSlotReorder : undefined}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -72,6 +72,10 @@ export const roomApi = {
 export const scheduleApi = {
   getById: (id: number) => apiClient.get(`/schedules/${id}`),
   getShareSchedule: (scheduleId: number) => apiClient.get(`/share/schedules/${scheduleId}`),
+  searchPlaces: (id: number, query: string) =>
+    apiClient.get(`/schedules/${id}/places/search`, { params: { query } }),
+  addSlot: (id: number, data: { placeId: number }) =>
+    apiClient.post(`/schedules/${id}/slots`, data),
   reorderSlots: (id: number, data: { slotIds: number[] }) =>
     apiClient.patch(`/schedules/${id}/slots/order`, data),
   regenerate: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>

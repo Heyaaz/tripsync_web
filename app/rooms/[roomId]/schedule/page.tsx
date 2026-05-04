@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import ScheduleMapModalView from '@/components/schedule/ScheduleMapModalView';
 import { useAuthStore } from '@/lib/store/auth';
 import { roomApi, scheduleApi } from '@/lib/api/client';
-import type { Room, Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
+import type { Place, Room, Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
 import { OPTION_LABELS } from '@/lib/utils/tpti';
 import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
@@ -68,6 +68,11 @@ type DetailModalState = {
   scheduleSlots: ScheduleSlot[];
 };
 
+type PlaceSearchResponse = {
+  places?: Place[];
+  query?: string;
+};
+
 function buildShareScheduleUrl(scheduleId?: number | null) {
   if (!scheduleId || typeof window === 'undefined') {
     return '';
@@ -109,10 +114,15 @@ export default function SchedulePage() {
   const [detailModalSlot, setDetailModalSlot] = useState<DetailModalState | null>(null);
   const [modalView, setModalView] = useState<'detail' | 'map'>('detail');
   const [mapScope, setMapScope] = useState<'slot' | 'all'>('slot');
+  const [addSlotModalOpen, setAddSlotModalOpen] = useState(false);
+  const [placeSearchQuery, setPlaceSearchQuery] = useState('');
+  const [placeCandidates, setPlaceCandidates] = useState<Place[]>([]);
+  const [placeSearchLoading, setPlaceSearchLoading] = useState(false);
+  const [addingPlaceId, setAddingPlaceId] = useState<number | null>(null);
   const [generatingMessageIndex, setGeneratingMessageIndex] = useState(0);
 
   useEffect(() => {
-    if (!detailModalSlot) {
+    if (!detailModalSlot && !addSlotModalOpen) {
       return;
     }
 
@@ -125,7 +135,7 @@ export default function SchedulePage() {
       document.body.style.overflow = originalOverflow;
       document.body.style.overscrollBehavior = originalOverscrollBehavior;
     };
-  }, [detailModalSlot]);
+  }, [detailModalSlot, addSlotModalOpen]);
 
   const hydrateRoomContext = useCallback(async () => {
     const roomRes = await roomApi.getById(roomId);
@@ -303,6 +313,68 @@ export default function SchedulePage() {
       .catch((err) => {
         setError(getApiErrorMessage(err, '순서 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'));
       });
+  }
+
+  const existingPlaceIds = new Set((confirmedOption?.slots ?? []).map((slot) => slot.place.id));
+
+  async function searchPlaces(query = placeSearchQuery) {
+    const scheduleId = confirmedOption?.scheduleId ?? shareScheduleId;
+    if (!scheduleId) {
+      setError('장소 검색에 필요한 일정 정보를 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
+
+    setPlaceSearchLoading(true);
+    try {
+      const res = await scheduleApi.searchPlaces(scheduleId, query);
+      const data = res.data?.data as PlaceSearchResponse | undefined;
+      setPlaceCandidates(data?.places ?? []);
+    } catch (err) {
+      setError(getApiErrorMessage(err, '장소 검색 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'));
+    } finally {
+      setPlaceSearchLoading(false);
+    }
+  }
+
+  function openAddSlotModal() {
+    setAddSlotModalOpen(true);
+    setPlaceSearchQuery('');
+    setPlaceCandidates([]);
+    void searchPlaces('');
+  }
+
+  async function handlePlaceSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await searchPlaces(placeSearchQuery);
+  }
+
+  async function addPlaceToSchedule(place: Place) {
+    const scheduleId = confirmedOption?.scheduleId ?? shareScheduleId;
+    if (!scheduleId) {
+      setError('일정 추가에 필요한 일정 정보를 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
+
+    setAddingPlaceId(place.id);
+    setError(null);
+    try {
+      const res = await scheduleApi.addSlot(scheduleId, { placeId: place.id });
+      const updated = res.data?.data as Schedule | undefined;
+      if (!updated) {
+        throw new Error('empty');
+      }
+      const normalized = normalizeConfirmedSchedule(updated);
+      setConfirmedOption(normalized);
+      setSelectedOption(normalized);
+      setShareScheduleId(normalized.scheduleId ?? scheduleId);
+      setAddSlotModalOpen(false);
+      setPlaceCandidates([]);
+      setPlaceSearchQuery('');
+    } catch (err) {
+      setError(getApiErrorMessage(err, '일정 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'));
+    } finally {
+      setAddingPlaceId(null);
+    }
   }
 
   // ── PHASE: generate ──────────────────────────────────────
@@ -541,7 +613,7 @@ export default function SchedulePage() {
 
                         return (
                           <div 
-                            key={slot.orderIndex} 
+                            key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`} 
                             className="bg-white border border-zinc-200 rounded-[20px] p-4 shadow-sm transition-all cursor-pointer hover:border-zinc-300 hover:shadow-md"
                             onClick={(e) => { 
                               e.stopPropagation(); 
@@ -817,14 +889,24 @@ export default function SchedulePage() {
                   <iconify-icon icon="solar:calendar-date-line-duotone" className="text-xl text-blue-500"></iconify-icon>
                   확정된 타임라인
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => openScheduleMap(confirmedOption, '확정 일정')}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[13px] font-semibold text-blue-700 transition hover:bg-blue-100"
-                >
-                  <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
-                  전체 지도 보기
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={openAddSlotModal}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-[13px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    <iconify-icon icon="solar:add-circle-bold-duotone" width="15"></iconify-icon>
+                    일정 추가
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openScheduleMap(confirmedOption, '확정 일정')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[13px] font-semibold text-blue-700 transition hover:bg-blue-100"
+                  >
+                    <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
+                    전체 지도 보기
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col gap-6">
                 {confirmedOption.slots.map((slot, index) => {
@@ -834,7 +916,7 @@ export default function SchedulePage() {
 
                   return (
                     <button
-                      key={slot.orderIndex}
+                      key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`}
                       type="button"
                       className="flex w-full gap-4 group rounded-[22px] border border-transparent px-1 py-1 text-left transition hover:border-zinc-200 hover:bg-zinc-50"
                       onClick={() => openDetailModal({
@@ -857,11 +939,18 @@ export default function SchedulePage() {
                       <div className="flex-1 pb-4">
                         <div className="flex justify-between items-start mb-1">
                           <p className="font-bold text-base text-zinc-900">{slot.place.name}</p>
-                          {slot.place.isDepopulationArea && (
-                            <span className="text-[10px] text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap bg-emerald-50">
-                              로컬 픽
-                            </span>
-                          )}
+                          <div className="ml-2 flex shrink-0 flex-wrap justify-end gap-1">
+                            {slot.reason === '직접 추가한 장소입니다.' && (
+                              <span className="text-[10px] text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap bg-blue-50">
+                                직접 추가
+                              </span>
+                            )}
+                            {slot.place.isDepopulationArea && (
+                              <span className="text-[10px] text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap bg-emerald-50">
+                                로컬 픽
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <p className="text-sm text-zinc-700">{slot.place.address}</p>
                       </div>
@@ -885,6 +974,93 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
+
+      {addSlotModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
+          <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setAddSlotModalOpen(false)} />
+          <div className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-[26px] bg-white shadow-2xl animate-fadeInUp">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-zinc-100 px-5 py-5">
+              <div>
+                <h3 className="text-xl font-bold text-zinc-900">일정 추가</h3>
+                <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">충남 장소를 검색해서 확정 타임라인 끝에 추가합니다. 추가 후 전체 지도에서 순서를 바꿀 수 있어요.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddSlotModalOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 hover:text-zinc-900"
+                aria-label="일정 추가 닫기"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+              <form onSubmit={handlePlaceSearchSubmit} className="mb-4 flex gap-2">
+                <input
+                  value={placeSearchQuery}
+                  onChange={(event) => setPlaceSearchQuery(event.target.value)}
+                  placeholder="장소명, 지역, 카테고리 검색"
+                  className="min-w-0 flex-1 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                />
+                <button
+                  type="submit"
+                  disabled={placeSearchLoading}
+                  className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                >
+                  {placeSearchLoading ? '검색 중' : '검색'}
+                </button>
+              </form>
+
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-sm font-bold text-zinc-900">{placeSearchQuery.trim() ? '검색 결과' : '추천 장소'}</h4>
+                <span className="text-xs font-medium text-zinc-500">{placeCandidates.length}개</span>
+              </div>
+
+              {placeSearchLoading && placeCandidates.length === 0 ? (
+                <div className="rounded-[20px] border border-zinc-100 bg-zinc-50 px-4 py-8 text-center text-sm font-medium text-zinc-600">장소를 불러오는 중입니다.</div>
+              ) : placeCandidates.length === 0 ? (
+                <div className="rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm font-normal leading-relaxed text-zinc-700">검색 결과가 없습니다. 다른 키워드로 다시 검색해 주세요.</div>
+              ) : (
+                <div className="space-y-2">
+                  {placeCandidates.map((place) => {
+                    const alreadyAdded = place.alreadyAdded || existingPlaceIds.has(place.id);
+                    const isAdding = addingPlaceId === place.id;
+
+                    return (
+                      <div key={place.id} className="rounded-[20px] border border-zinc-200 bg-white px-4 py-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p className="font-bold text-zinc-900">{place.name}</p>
+                              {place.isDepopulationArea ? (
+                                <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">로컬 픽</span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">{place.address}</p>
+                            {place.category ? <p className="mt-1 text-xs font-medium text-zinc-500">{place.category}</p> : null}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={alreadyAdded || addingPlaceId !== null}
+                            onClick={() => addPlaceToSchedule(place)}
+                            className={`shrink-0 rounded-full border px-3 py-2 text-xs font-bold transition ${
+                              alreadyAdded
+                                ? 'cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-400'
+                                : 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60'
+                            }`}
+                          >
+                            {alreadyAdded ? '추가됨' : isAdding ? '추가 중' : '추가'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {detailModalSlot ? (
         <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">

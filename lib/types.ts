@@ -116,6 +116,7 @@ export interface Place {
   isDepopulationArea?: boolean;
   latitude?: number;
   longitude?: number;
+  alreadyAdded?: boolean;
 }
 
 export type SlotType = 'common' | 'personal';

@@ -18,6 +18,20 @@ type ScheduleSlotWithCoordinates = ScheduleSlot & {
   };
 };
 
+type MapPoint = {
+  slot: ScheduleSlotWithCoordinates;
+  latitude: number;
+  longitude: number;
+};
+
+type KakaoPlaceSearchResult = {
+  place_name?: string;
+  address_name?: string;
+  road_address_name?: string;
+  x?: string;
+  y?: string;
+};
+
 type KakaoLatLng = {
   getLat?: () => number;
   getLng?: () => number;
@@ -60,6 +74,15 @@ type KakaoMapsApi = {
     event: {
       addListener: (target: KakaoMarkerInstance, eventName: string, handler: () => void) => void;
     };
+    services?: {
+      Places: new () => {
+        keywordSearch: (
+          keyword: string,
+          callback: (results: KakaoPlaceSearchResult[], status: string) => void,
+        ) => void;
+      };
+      Status: { OK: string };
+    };
   };
 };
 
@@ -69,9 +92,58 @@ function hasCoordinates(slot: ScheduleSlot): slot is ScheduleSlotWithCoordinates
   return Number.isFinite(slot.place.latitude) && Number.isFinite(slot.place.longitude);
 }
 
-function buildKakaoMapUrl(slot: ScheduleSlotWithCoordinates) {
-  const encodedName = encodeURIComponent(slot.place.name);
-  return `https://map.kakao.com/link/map/${encodedName},${slot.place.latitude},${slot.place.longitude}`;
+function buildKakaoMapUrl(slot: ScheduleSlot) {
+  return `https://map.kakao.com/link/search/${encodeURIComponent(slot.place.name)}`;
+}
+
+function normalizeKoreanSearchText(value?: string | null) {
+  return (value ?? '').replace(/\s+/g, '').toLowerCase();
+}
+
+function getSlotKey(slot: ScheduleSlot) {
+  return String(slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`);
+}
+
+function pickBestKakaoPlace(slot: ScheduleSlot, results: KakaoPlaceSearchResult[]) {
+  const placeName = normalizeKoreanSearchText(slot.place.name);
+  const address = normalizeKoreanSearchText(slot.place.address);
+
+  return results.find((result) => {
+    const resultName = normalizeKoreanSearchText(result.place_name);
+    const resultAddress = normalizeKoreanSearchText(`${result.road_address_name ?? ''} ${result.address_name ?? ''}`);
+    const nameMatches = resultName.includes(placeName) || placeName.includes(resultName);
+    const addressMatches = !address || !resultAddress || resultAddress.includes(address.slice(0, 8)) || address.includes(resultAddress.slice(0, 8));
+    return nameMatches && addressMatches;
+  }) ?? results[0];
+}
+
+async function resolveKakaoPlacePoint(kakao: KakaoMapsApi, slot: ScheduleSlotWithCoordinates): Promise<MapPoint> {
+  const services = kakao.maps.services;
+  if (!services?.Places) {
+    return { slot, latitude: slot.place.latitude, longitude: slot.place.longitude };
+  }
+
+  const keyword = slot.place.name;
+  const places = new services.Places();
+
+  return new Promise((resolve) => {
+    places.keywordSearch(keyword, (results, status) => {
+      if (status !== services.Status.OK || results.length === 0) {
+        resolve({ slot, latitude: slot.place.latitude, longitude: slot.place.longitude });
+        return;
+      }
+
+      const best = pickBestKakaoPlace(slot, results);
+      const latitude = Number(best.y);
+      const longitude = Number(best.x);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        resolve({ slot, latitude, longitude });
+        return;
+      }
+
+      resolve({ slot, latitude: slot.place.latitude, longitude: slot.place.longitude });
+    });
+  });
 }
 
 function loadKakaoMapsSdk(appKey: string) {
@@ -79,8 +151,15 @@ function loadKakaoMapsSdk(appKey: string) {
     return Promise.reject(new Error('Kakao Maps SDK can only load in the browser.'));
   }
 
-  if (window.kakao?.maps) {
-    return Promise.resolve(window.kakao as KakaoMapsApi);
+  const currentKakao = window.kakao as KakaoMapsApi | undefined;
+  if (currentKakao?.maps?.services?.Places) {
+    return Promise.resolve(currentKakao);
+  }
+
+  if (currentKakao?.maps && !currentKakao.maps.services?.Places) {
+    document.getElementById('kakao-maps-sdk')?.remove();
+    window.kakao = undefined;
+    kakaoMapsSdkPromise = null;
   }
 
   if (kakaoMapsSdkPromise) {
@@ -100,7 +179,7 @@ function loadKakaoMapsSdk(appKey: string) {
 
     const existing = document.getElementById('kakao-maps-sdk') as HTMLScriptElement | null;
     if (existing) {
-      if (window.kakao?.maps) {
+      if ((window.kakao as KakaoMapsApi | undefined)?.maps?.services?.Places) {
         onReady();
         return;
       }
@@ -115,7 +194,7 @@ function loadKakaoMapsSdk(appKey: string) {
     const script = document.createElement('script');
     script.id = 'kakao-maps-sdk';
     script.async = true;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=services`;
     script.addEventListener('load', onReady, { once: true });
     script.addEventListener('error', () => {
       kakaoMapsSdkPromise = null;
@@ -225,18 +304,23 @@ export default function ScheduleMapModalView({
     let cancelled = false;
 
     loadKakaoMapsSdk(appKey)
-      .then((kakao) => {
+      .then(async (kakao) => {
         if (cancelled || !mapContainerRef.current) {
           return;
         }
 
-        const selectedCoordinateSlot =
-          slotsWithCoords.find((slot) => slot.orderIndex === (selectedOrderIndex ?? fallbackOrderIndex))
-          ?? slotsWithCoords[0];
+        const mapPoints = await Promise.all(slotsWithCoords.map((slot) => resolveKakaoPlacePoint(kakao, slot)));
+        if (cancelled || mapPoints.length === 0) {
+          return;
+        }
+
+        const selectedCoordinatePoint =
+          mapPoints.find((point) => point.slot.orderIndex === (selectedOrderIndex ?? fallbackOrderIndex))
+          ?? mapPoints[0];
 
         if (!mapRef.current) {
           mapRef.current = new kakao.maps.Map(mapContainerRef.current, {
-            center: new kakao.maps.LatLng(selectedCoordinateSlot.place.latitude, selectedCoordinateSlot.place.longitude),
+            center: new kakao.maps.LatLng(selectedCoordinatePoint.latitude, selectedCoordinatePoint.longitude),
             level: 7,
           });
           const zoomControl = new kakao.maps.ZoomControl();
@@ -250,9 +334,10 @@ export default function ScheduleMapModalView({
 
         const bounds = new kakao.maps.LatLngBounds();
 
-        slotsWithCoords.forEach((slot) => {
-          const displayIndex = orderedSlots.findIndex((orderedSlot) => orderedSlot.orderIndex === slot.orderIndex) + 1;
-          const position = new kakao.maps.LatLng(slot.place.latitude, slot.place.longitude);
+        mapPoints.forEach((point) => {
+          const slot = point.slot;
+          const displayIndex = orderedSlots.findIndex((orderedSlot) => getSlotKey(orderedSlot) === getSlotKey(slot)) + 1;
+          const position = new kakao.maps.LatLng(point.latitude, point.longitude);
           bounds.extend(position);
 
           const marker = new kakao.maps.Marker({
@@ -272,7 +357,7 @@ export default function ScheduleMapModalView({
             yAnchor: 1.6,
             content: createMarkerBadge(
               displayIndex,
-              slot.orderIndex === selectedCoordinateSlot.orderIndex,
+              slot.orderIndex === selectedCoordinatePoint.slot.orderIndex,
               () => setSelectedOrderIndex(slot.orderIndex),
             ),
           });
@@ -281,7 +366,7 @@ export default function ScheduleMapModalView({
         });
 
         if (!hasFitBoundsRef.current) {
-          if (slotsWithCoords.length === 1) {
+          if (mapPoints.length === 1) {
             mapRef.current.setCenter(bounds.getSouthWest());
             mapRef.current.setLevel(5);
           } else {
@@ -290,8 +375,8 @@ export default function ScheduleMapModalView({
           hasFitBoundsRef.current = true;
         }
 
-        if (selectedCoordinateSlot) {
-          mapRef.current.panTo(new kakao.maps.LatLng(selectedCoordinateSlot.place.latitude, selectedCoordinateSlot.place.longitude));
+        if (selectedCoordinatePoint && (isSingleSlotView || selectedOrderIndex !== null)) {
+          mapRef.current.panTo(new kakao.maps.LatLng(selectedCoordinatePoint.latitude, selectedCoordinatePoint.longitude));
         }
 
         setMapStatus('ready');
@@ -305,7 +390,7 @@ export default function ScheduleMapModalView({
     return () => {
       cancelled = true;
     };
-  }, [appKey, fallbackOrderIndex, orderedSlots, selectedOrderIndex, slotsWithCoords]);
+  }, [appKey, fallbackOrderIndex, isSingleSlotView, orderedSlots, selectedOrderIndex, slotsWithCoords]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-zinc-50">
@@ -413,7 +498,7 @@ export default function ScheduleMapModalView({
                 </button>
               </div>
             ) : null}
-            {hasCoordinates(selectedSlot) ? (
+            {selectedSlot ? (
               <a
                 href={buildKakaoMapUrl(selectedSlot)}
                 target="_blank"

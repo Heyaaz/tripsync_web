@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { TptiScores } from '../types';
 
-// Next.js rewrites(/api → NestJS)를 활용하므로 동일 오리진 /api 사용
+// Next.js rewrites(/api → Spring)를 활용하므로 동일 오리진 /api 사용
 // 덕분에 CORS 없이 HttpOnly 쿠키가 자동 전달됨
-const BASE_URL = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000');
+const BASE_URL = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080');
 
 export const apiClient = axios.create({
   baseURL: `${BASE_URL}/api`,

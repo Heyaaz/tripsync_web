@@ -10,7 +10,7 @@ interface Props {
 export const dynamic = 'force-dynamic';
 
 function getApiBaseUrl() {
-  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+  return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 }
 
 async function fetchPublicSchedule(scheduleId: string) {

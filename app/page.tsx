@@ -1,7 +1,200 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { authApi, roomApi } from '@/lib/api/client';
+import { useAuthStore } from '@/lib/store/auth';
+import type { Room } from '@/lib/types';
+import { formatTripDateRange } from '@/lib/utils/date';
+import { normalizeRoomSummary } from '@/lib/utils/room';
+
+type RoomPayload = {
+  roomId: number;
+  destination: string;
+  tripDate: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
+  shareCode: string;
+  status: Room['status'];
+  hostUserId: number;
+  memberCount: number;
+  createdAt: string;
+};
+
+function isRoomPayload(value: unknown): value is RoomPayload {
+  if (!value || typeof value !== 'object') return false;
+  const room = value as Partial<RoomPayload>;
+  return (
+    typeof room.roomId === 'number' &&
+    typeof room.destination === 'string' &&
+    typeof room.tripDate === 'string' &&
+    typeof room.shareCode === 'string' &&
+    typeof room.status === 'string' &&
+    typeof room.hostUserId === 'number' &&
+    typeof room.memberCount === 'number' &&
+    typeof room.createdAt === 'string'
+  );
+}
+
+function roomEntryHref(room: Room) {
+  return room.status === 'completed' ? `/rooms/${room.roomId}/schedule` : `/rooms/${room.roomId}/conflict`;
+}
+
+function roomEntryLabel(room: Room) {
+  if (room.status === 'completed') return '확정 일정으로 이동';
+  if (room.status === 'ready') return '갈등 지도에서 일정 만들기';
+  return '방으로 다시 이동';
+}
+
+function roomStatusLabel(room: Room) {
+  if (room.status === 'completed') return '확정 완료';
+  if (room.status === 'ready') return '일정 생성 가능';
+  return '대기 중';
+}
+
+function roomStatusClassName(room: Room) {
+  if (room.status === 'completed') return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+  if (room.status === 'ready') return 'bg-blue-50 text-blue-700 ring-blue-100';
+  return 'bg-amber-50 text-amber-700 ring-amber-100';
+}
+
+
+function HomeAuthActions() {
+  const { user, clear } = useAuthStore();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await authApi.logout();
+    } catch {
+      // 서버 세션 정리에 실패해도 홈에서는 로컬 세션을 먼저 비워 재로그인을 가능하게 한다.
+    } finally {
+      clear();
+      setLoggingOut(false);
+    }
+  }
+
+  if (!user || user.isGuest) {
+    return (
+      <Link
+        href="/rooms/new"
+        className="spring flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-800 shadow-[0_2px_8px_rgba(15,23,42,0.06)]"
+      >
+        로그인
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden max-w-[120px] truncate text-[13px] font-semibold text-zinc-700 sm:inline">
+        {user.nickname}
+      </span>
+      <button
+        type="button"
+        onClick={handleLogout}
+        disabled={loggingOut}
+        className="spring flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-800 shadow-[0_2px_8px_rgba(15,23,42,0.06)] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {loggingOut ? '로그아웃 중' : '로그아웃'}
+      </button>
+    </div>
+  );
+}
+
+function MyRoomsPanel() {
+  const { user, currentRoom, setCurrentRoom } = useAuthStore();
+  const currentRoomRef = useRef<Room | null>(currentRoom);
+  const [rooms, setRooms] = useState<Room[]>(() => (currentRoom ? [currentRoom] : []));
+
+  useEffect(() => {
+    currentRoomRef.current = currentRoom;
+  }, [currentRoom]);
+
+  useEffect(() => {
+    if (!user || user.isGuest) {
+      return;
+    }
+
+    let cancelled = false;
+
+    roomApi.getMyRooms()
+      .then((res) => {
+        if (cancelled) return;
+        const payload = res.data?.data?.rooms;
+        const nextRooms = Array.isArray(payload)
+          ? payload.filter(isRoomPayload).map((room) => normalizeRoomSummary(room))
+          : [];
+        setRooms(nextRooms);
+        if (nextRooms[0]) setCurrentRoom(nextRooms[0]);
+      })
+      .catch(() => {
+        if (!cancelled) setRooms(currentRoomRef.current ? [currentRoomRef.current] : []);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setCurrentRoom, user]);
+
+  const visibleRooms = useMemo(() => {
+    const byId = new Map<number, Room>();
+    rooms.forEach((room) => byId.set(room.roomId, room));
+    if (currentRoom) byId.set(currentRoom.roomId, byId.get(currentRoom.roomId) ?? currentRoom);
+    return Array.from(byId.values()).sort((a, b) => b.roomId - a.roomId).slice(0, 3);
+  }, [currentRoom, rooms]);
+
+  if ((!user || user.isGuest) && visibleRooms.length === 0) return null;
+
+  return (
+    <section className="mb-24 rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_16px_42px_rgba(37,99,235,0.08)]">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
+            <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
+            내 여행방
+          </div>
+          <h2 className="text-2xl font-black tracking-tight text-zinc-900">만든 방으로 다시 이동</h2>
+          <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
+            홈으로 돌아와도 참여 중인 여행방을 바로 이어서 확인할 수 있습니다.
+          </p>
+        </div>
+        <Link href="/rooms/new" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(15,23,42,0.18)]">
+          새 방 만들기
+          <iconify-icon icon="solar:add-circle-bold" width="15"></iconify-icon>
+        </Link>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {visibleRooms.map((room) => (
+          <Link
+            key={room.roomId}
+            href={roomEntryHref(room)}
+            className="spring group rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200"
+            onClick={() => setCurrentRoom(room)}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>
+                {roomStatusLabel(room)}
+              </span>
+              <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
+            </div>
+            <h3 className="truncate text-lg font-black text-zinc-900">{room.destination} 여행방</h3>
+            <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
+                {formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}
+            </p>
+            <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-blue-600">
+              {roomEntryLabel(room)}
+              <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function LandingPage() {
   useEffect(() => {
@@ -80,7 +273,7 @@ export default function LandingPage() {
           <nav className="flex items-center gap-5 bg-white px-5 py-2.5 rounded-2xl border border-zinc-200 shadow-[0_8px_28px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.92)] pointer-events-auto transition-shadow duration-300 hover:shadow-[0_10px_34px_rgba(15,23,42,0.1)]">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.45)]">
-                <iconify-icon icon="solar:routing-3-bold" width="16" style={{ color: 'white' }}></iconify-icon>
+              <iconify-icon icon="solar:routing-3-bold" width="16" style={{ color: 'white' }}></iconify-icon>
               </div>
               <span className="font-black text-sm tracking-tight text-zinc-900">TripSync</span>
             </div>
@@ -95,6 +288,7 @@ export default function LandingPage() {
               여행 시작
               <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
             </Link>
+            <HomeAuthActions />
           </nav>
         </header>
 
@@ -119,7 +313,7 @@ export default function LandingPage() {
                 className="spring px-8 py-4 rounded-2xl bg-zinc-900 text-white font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(0,0,0,0.2)]"
               >
                 여행방 만들기
-                <iconify-icon icon="solar:round-alt-arrow-right-linear" width="17"></iconify-icon>
+              <iconify-icon icon="solar:round-alt-arrow-right-linear" width="17"></iconify-icon>
               </Link>
               <Link
                 href="/tpti"
@@ -138,7 +332,7 @@ export default function LandingPage() {
               ].map((item) => (
                 <div key={item.label} className="flex-1 flex items-center gap-3 py-5 px-6">
                   <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center flex-shrink-0`}>
-                    <iconify-icon icon={item.icon} width="20" style={{ color: item.color }}></iconify-icon>
+                  <iconify-icon icon={item.icon} width="20" style={{ color: item.color }}></iconify-icon>
                   </div>
                   <div className="text-left">
                     <div className="text-[14px] font-semibold text-zinc-900">{item.label}</div>
@@ -148,6 +342,8 @@ export default function LandingPage() {
               ))}
             </div>
           </section>
+
+          <MyRoomsPanel />
 
           {/* ── How It Works ── */}
           <section className="mb-32">
@@ -202,15 +398,15 @@ export default function LandingPage() {
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
                       <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center border ${item.border}`}>
-                        <iconify-icon icon={item.icon} width="22" style={{ color: item.color }}></iconify-icon>
+                      <iconify-icon icon={item.icon} width="22" style={{ color: item.color }}></iconify-icon>
                       </div>
                       <span className="text-[28px] font-black text-zinc-500 leading-none">{item.step}</span>
                     </div>
                     <h3 className="text-lg font-black text-zinc-900 mb-2.5 tracking-tight">{item.title}</h3>
-                    <p className="text-zinc-800 text-[14px] leading-relaxed break-keep-all mb-6 font-normal tracking-normal">{item.desc}</p>
+                  <p className="text-zinc-800 text-[14px] leading-relaxed break-keep-all mb-6 font-normal tracking-normal">{item.desc}</p>
                     <Link href={item.href} className={`flex items-center gap-1 text-[13px] font-medium ${item.ctaColor}`}>
                       {item.cta}
-                      <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
+                    <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
                     </Link>
                   </div>
                 </div>
@@ -231,7 +427,7 @@ export default function LandingPage() {
                 <h3 className="text-3xl md:text-[42px] font-black text-zinc-900 mb-5 leading-[1.1] tracking-tight break-keep-all">
                   아무도 소외되지 않는<br />여행 일정을 만듭니다.
                 </h3>
-                <p className="text-zinc-800 text-[16px] leading-relaxed break-keep-all max-w-md font-normal tracking-normal mb-8">
+              <p className="text-zinc-800 text-[16px] leading-relaxed break-keep-all max-w-md font-normal tracking-normal mb-8">
                   전국 명소 데이터를 기반으로 그룹 구성원의 취향 갈등을 분석해, AI가 3가지 맞춤 여행 코스를 제안합니다.
                 </p>
                 <Link
@@ -239,7 +435,7 @@ export default function LandingPage() {
                   className="spring inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-700 text-white text-sm font-bold rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.15)] transition-colors duration-200"
                 >
                   지금 바로 시작
-                  <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
+                <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
                 </Link>
               </div>
 
@@ -252,7 +448,7 @@ export default function LandingPage() {
                 ].map((f) => (
                   <div key={f.label} className="flex items-start gap-3 rounded-xl p-4 border" style={{ backgroundColor: f.bg, borderColor: f.border }}>
                     <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0">
-                      <iconify-icon icon={f.icon} width="18" style={{ color: f.color }}></iconify-icon>
+                    <iconify-icon icon={f.icon} width="18" style={{ color: f.color }}></iconify-icon>
                     </div>
                     <div>
                       <div className="text-zinc-900 text-[14px] font-semibold mb-0.5">{f.label}</div>
@@ -274,16 +470,16 @@ export default function LandingPage() {
               <h2 className="text-xl md:text-2xl font-black text-white tracking-tight mb-3 break-keep-all">
                 여행 계획, 더 이상 혼자 짊어지지 마세요.
               </h2>
-              <p className="text-blue-50/92 text-[15px] font-medium mb-7 break-keep-all">
+            <p className="text-blue-50/92 text-[15px] font-medium mb-7 break-keep-all">
                 여행방을 만들고 링크를 공유하면 끝 — 나머지는 TripSync와 함께 하세요.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2.5">
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2.5">
                 <Link
                   href="/rooms/new"
                   className="spring inline-flex px-6 py-3 items-center justify-center bg-white text-blue-700 rounded-xl font-bold text-sm shadow-[0_4px_20px_rgba(0,0,0,0.2)] gap-1.5"
                 >
                   여행방 만들기
-                  <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
+                <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
                 </Link>
                 <Link
                   href="/tpti"
@@ -299,7 +495,7 @@ export default function LandingPage() {
           <footer className="py-10 border-t border-zinc-200/50 flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center shadow-[0_2px_8px_rgba(37,99,235,0.35)]">
-                <iconify-icon icon="solar:routing-3-bold" width="13" style={{ color: 'white' }}></iconify-icon>
+              <iconify-icon icon="solar:routing-3-bold" width="13" style={{ color: 'white' }}></iconify-icon>
               </div>
               <span className="font-black text-sm text-zinc-900">TripSync</span>
             </div>

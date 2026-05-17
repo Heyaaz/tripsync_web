@@ -599,7 +599,7 @@ export default function SchedulePage() {
                 </div>
 
                 {isExpanded && opt.slots && (
-                  <div className="px-5 pb-5 border-t border-zinc-200 pt-5 ml-7">
+                  <div className="border-t border-zinc-200 px-5 pb-5 pt-5">
                     <div className="mb-4 rounded-[18px] bg-zinc-50 border border-zinc-200 px-4 py-3">
                       <p className="text-sm font-normal text-zinc-700 leading-relaxed">
                         이 옵션은 확정 전 비교용 제안안입니다. 아래 코스 흐름을 보고 마음에 드는 일정을 선택해 주세요.
@@ -908,7 +908,7 @@ export default function SchedulePage() {
                   </button>
                 </div>
               </div>
-              <div className="flex flex-col gap-6">
+              <div className="relative flex flex-col gap-6 before:absolute before:left-4 before:bottom-4 before:top-4 before:w-px before:bg-zinc-200">
                 {confirmedOption.slots.map((slot, index) => {
                   const isPersonal = slot.slotType === 'personal';
                   const memberIdx = isPersonal ? confirmedOption.satisfactionByUser.findIndex((m) => m.userId === slot.targetUserId) : -1;
@@ -918,7 +918,7 @@ export default function SchedulePage() {
                     <button
                       key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`}
                       type="button"
-                      className="flex w-full gap-4 group rounded-[22px] border border-transparent px-1 py-1 text-left transition hover:border-zinc-200 hover:bg-zinc-50"
+                      className="group relative z-10 grid w-full grid-cols-[2rem_minmax(0,1fr)] gap-4 rounded-[22px] border border-transparent px-0 py-1 text-left transition hover:border-zinc-200 hover:bg-zinc-50"
                       onClick={() => openDetailModal({
                         slot,
                         accentColor,
@@ -927,16 +927,15 @@ export default function SchedulePage() {
                         scheduleSlots: confirmedOption.slots ?? [],
                       })}
                     >
-                      <div className="flex flex-col items-center">
+                      <div className="flex justify-center pt-0.5">
                         <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-zinc-200 bg-white group-hover:scale-110 transition-transform shadow-sm"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-bold shadow-sm transition-transform group-hover:scale-110"
                           style={{ color: accentColor }}
                         >
                           {index + 1}
                         </div>
-                        <div className="w-[1px] h-full bg-zinc-200 my-2" />
                       </div>
-                      <div className="flex-1 pb-4">
+                      <div className="min-w-0 pb-4 pr-1">
                         <div className="flex justify-between items-start mb-1">
                           <p className="font-bold text-base text-zinc-900">{slot.place.name}</p>
                           <div className="ml-2 flex shrink-0 flex-wrap justify-end gap-1">

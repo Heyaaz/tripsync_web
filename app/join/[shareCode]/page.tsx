@@ -643,7 +643,7 @@ export default function JoinPage() {
 
                <button
                  className="btn-primary w-full shadow-[0_0_30px_rgba(16,185,129,0.2)] bg-emerald-600 hover:bg-emerald-500"
-                 onClick={() => router.push(`/rooms/${roomInfo?.roomId}/conflict`)}
+                 onClick={() => roomInfo && router.push(`/rooms/${roomInfo.roomId}/conflict`)}
                >
                  그룹 궁합 지도 확인하러 가기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
                </button>

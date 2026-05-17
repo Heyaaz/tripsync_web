@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { authApi, roomApi } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth';
@@ -221,8 +222,14 @@ export default function MyPage() {
                 </form>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <a href={authApi.getOAuthStartUrl('google', '/mypage')} className="btn-secondary justify-center">Google</a>
-                  <a href={authApi.getOAuthStartUrl('kakao', '/mypage')} className="btn-secondary justify-center">Kakao</a>
+                  <a href={authApi.getOAuthStartUrl('google', '/mypage')} className="btn-secondary justify-center gap-2">
+                    <iconify-icon icon="logos:google-icon" width="20"></iconify-icon>
+                    <span>Google</span>
+                  </a>
+                  <a href={authApi.getOAuthStartUrl('kakao', '/mypage')} className="btn-secondary justify-center gap-2">
+                    <Image src="/icons/kakaotalk.svg" alt="" width={20} height={20} className="rounded-md" />
+                    <span>Kakao</span>
+                  </a>
                 </div>
 
                 <button type="button" className="mt-6 w-full text-sm font-semibold text-blue-600" onClick={() => { setError(''); setAuthMode((m) => m === 'login' ? 'register' : 'login'); }}>

@@ -163,7 +163,6 @@ export default function ConflictPage() {
 
     const result = await shareWithSystemFallback({
       title: `${roomContext?.roomName ?? roomContext?.destination ?? 'TripSync'} 초대`,
-      text: 'TripSync에서 여행 MBTI 검사 후 여행 계획에 합류해 주세요.',
       url: `${window.location.origin}/join/${code}`,
     });
 

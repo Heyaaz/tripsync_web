@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, tptiApi, roomApi } from '@/lib/api/client';
@@ -9,7 +10,7 @@ import { TPTI_QUESTIONS, calculateScores, getCharacter } from '@/lib/utils/tpti'
 import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
 import { normalizeRoomSummary } from '@/lib/utils/room';
-import type { Room, TptiResult } from '@/lib/types';
+import type { Room, TptiResult, User } from '@/lib/types';
 
 type Step = 'loading' | 'auth' | 'intro' | 'tpti' | 'submitting' | 'done';
 type JoinRoomInfo = Pick<
@@ -66,18 +67,53 @@ export default function JoinPage() {
     setStep('tpti');
   }, []);
 
+  const syncLatestTptiResult = useCallback(async (userData: User): Promise<TptiResult | null> => {
+    try {
+      const res = await tptiApi.getResult(userData.id);
+      const data = res.data?.data;
+      if (!data?.scores || !data?.resultId) {
+        return null;
+      }
+
+      const character = getCharacter(data.scores);
+      const result: TptiResult = {
+        resultId: data.resultId,
+        userId: data.userId ?? userData.id,
+        nickname: data.nickname ?? userData.nickname,
+        scores: data.scores,
+        characterName: data.characterName,
+        characterEmoji: character.emoji,
+        createdAt: data.createdAt,
+      };
+      setTptiResult(result);
+      return result;
+    } catch {
+      return null;
+    }
+  }, [setTptiResult]);
+
+  const moveToConflict = useCallback((roomId?: number) => {
+    const nextRoomId = roomId ?? roomInfo?.roomId;
+    if (!nextRoomId) {
+      setStep('done');
+      return;
+    }
+    router.push(`/rooms/${nextRoomId}/conflict`);
+  }, [roomInfo?.roomId, router]);
+
   const retryJoinWithSavedResult = useCallback(async (resultId: number) => {
     setError('');
     setStep('submitting');
 
     try {
-      await roomApi.join(shareCode, { tptiResultId: resultId });
-      setStep('done');
+      const res = await roomApi.join(shareCode, { tptiResultId: resultId });
+      const joinedRoomId = res.data?.data?.roomId;
+      moveToConflict(typeof joinedRoomId === 'number' ? joinedRoomId : undefined);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '여행 방 합류에 실패했습니다. 다시 시도해주세요.'));
       setStep('intro');
     }
-  }, [shareCode]);
+  }, [moveToConflict, shareCode]);
 
   const loadRoom = useEffectEvent(async () => {
     setError('');
@@ -128,27 +164,32 @@ export default function JoinPage() {
       return;
     }
 
-    if (tptiResult?.resultId) {
-      if (tptiResult.userId !== user.id) {
-        setTptiResult(null);
-        startFreshTpti();
-        return;
-      }
+    const savedResult = tptiResult?.resultId && tptiResult.userId === user.id
+      ? tptiResult
+      : await syncLatestTptiResult(user);
 
-      const joinKey = `${shareCode}:${user.id}:${tptiResult.resultId}`;
+    if (savedResult?.resultId) {
+      const joinKey = `${shareCode}:${user.id}:${savedResult.resultId}`;
       if (autoJoinAttemptRef.current !== joinKey) {
         autoJoinAttemptRef.current = joinKey;
         setStep('submitting');
         try {
-          await roomApi.join(shareCode, { tptiResultId: tptiResult.resultId });
+          const res = await roomApi.join(shareCode, { tptiResultId: savedResult.resultId });
+          const joinedRoomId = res.data?.data?.roomId;
+          moveToConflict(typeof joinedRoomId === 'number' ? joinedRoomId : undefined);
+          return;
         } catch (err: unknown) {
           setError(getApiErrorMessage(err, '저장된 결과로 다시 합류하지 못했습니다. 한 번 더 시도해주세요.'));
           setStep('intro');
           return;
         }
       }
-      setStep('done');
+      moveToConflict();
       return;
+    }
+
+    if (tptiResult?.resultId && tptiResult.userId !== user.id) {
+      setTptiResult(null);
     }
 
     startFreshTpti();
@@ -177,8 +218,11 @@ export default function JoinPage() {
         if (!cancelled && userData && !userData.isGuest) {
           setUser(userData);
           router.replace(`/join/${shareCode}`);
-          if (tptiResult?.resultId && tptiResult.userId === userData.id) {
-            await retryJoinWithSavedResult(tptiResult.resultId);
+          const savedResult = tptiResult?.resultId && tptiResult.userId === userData.id
+            ? tptiResult
+            : await syncLatestTptiResult(userData);
+          if (savedResult?.resultId) {
+            await retryJoinWithSavedResult(savedResult.resultId);
           } else {
             if (tptiResult?.resultId) setTptiResult(null);
             startFreshTpti();
@@ -210,7 +254,7 @@ export default function JoinPage() {
     return () => {
       cancelled = true;
     };
-  }, [retryJoinWithSavedResult, router, setTptiResult, setUser, shareCode, startFreshTpti, tptiResult?.resultId, tptiResult?.userId]);
+  }, [retryJoinWithSavedResult, router, setTptiResult, setUser, shareCode, startFreshTpti, syncLatestTptiResult, tptiResult]);
 
   async function handleAuth(e: FormEvent) {
     e.preventDefault();
@@ -231,8 +275,11 @@ export default function JoinPage() {
       }
 
       setUser(userData);
-      if (tptiResult?.resultId && tptiResult.userId === userData.id) {
-        await retryJoinWithSavedResult(tptiResult.resultId);
+      const savedResult = tptiResult?.resultId && tptiResult.userId === userData.id
+        ? tptiResult
+        : await syncLatestTptiResult(userData);
+      if (savedResult?.resultId) {
+        await retryJoinWithSavedResult(savedResult.resultId);
         return;
       }
       if (tptiResult?.resultId) {
@@ -287,13 +334,14 @@ export default function JoinPage() {
         throw new Error('missing_result_id');
       }
       setTptiResult(result);
-      await roomApi.join(shareCode, { tptiResultId: result.resultId });
+      const joinRes = await roomApi.join(shareCode, { tptiResultId: result.resultId });
+      const joinedRoomId = joinRes.data?.data?.roomId;
+      moveToConflict(typeof joinedRoomId === 'number' ? joinedRoomId : undefined);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '검사 결과를 저장하거나 방에 합류하지 못했습니다. 다시 시도해주세요.'));
       setStep('intro');
       return;
     }
-    setStep('done');
   }
 
   if (step === 'loading') {
@@ -420,11 +468,13 @@ export default function JoinPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <a className="btn-secondary justify-center" href={authApi.getOAuthStartUrl('google', `/join/${shareCode}`)}>
-                    Google
+                  <a className="btn-secondary justify-center gap-2" href={authApi.getOAuthStartUrl('google', `/join/${shareCode}`)}>
+                    <iconify-icon icon="logos:google-icon" width="20"></iconify-icon>
+                    <span>Google</span>
                   </a>
-                  <a className="btn-secondary justify-center" href={authApi.getOAuthStartUrl('kakao', `/join/${shareCode}`)}>
-                    Kakao
+                  <a className="btn-secondary justify-center gap-2" href={authApi.getOAuthStartUrl('kakao', `/join/${shareCode}`)}>
+                    <Image src="/icons/kakaotalk.svg" alt="" width={20} height={20} className="rounded-md" />
+                    <span>Kakao</span>
                   </a>
                 </div>
 

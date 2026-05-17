@@ -41,6 +41,8 @@ export default function ScheduleAlbumPage() {
 
   const totalPhotoCount = album?.totalPhotoCount ?? album?.slots.reduce((sum, slot) => sum + slot.photos.length, 0) ?? 0;
   const localPickCount = album?.slots.filter((slot) => slot.place.isDepopulationArea).length ?? 0;
+  const isSheetOpen = sheet !== null;
+  const previewUrl = sheet?.previewUrl ?? null;
 
   const representativePhotos = useMemo(() => {
     return album?.slots.flatMap((slot) => slot.photos.slice(0, 2)).slice(0, 6) ?? [];
@@ -75,14 +77,18 @@ export default function ScheduleAlbumPage() {
   }, [loadAlbum]);
 
   useEffect(() => {
-    if (!sheet) return;
+    if (!isSheetOpen) return;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = originalOverflow;
-      if (sheet.previewUrl) URL.revokeObjectURL(sheet.previewUrl);
     };
-  }, [sheet]);
+  }, [isSheetOpen]);
+
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   function openUploadSheet(slot: TripPhotoAlbumSlot) {
     setFileError(null);
@@ -90,7 +96,6 @@ export default function ScheduleAlbumPage() {
   }
 
   function closeUploadSheet() {
-    if (sheet?.previewUrl) URL.revokeObjectURL(sheet.previewUrl);
     setSheet(null);
     setFileError(null);
   }
@@ -98,8 +103,6 @@ export default function ScheduleAlbumPage() {
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     if (!sheet) return;
-
-    if (sheet.previewUrl) URL.revokeObjectURL(sheet.previewUrl);
 
     if (!file) {
       setSheet({ ...sheet, file: null, previewUrl: null });

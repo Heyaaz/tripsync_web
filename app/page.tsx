@@ -410,9 +410,9 @@ export default function LandingPage() {
                   ctaColor: 'text-violet-600',
                 },
               ].map((item, i) => (
-                <div key={item.step} className={`reveal card-lift bg-white rounded-2xl p-7 border border-zinc-200/70 relative overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,0.05)]`} style={{ transitionDelay: `${i * 80}ms` }}>
+                <div key={item.step} className="reveal card-lift flex h-full flex-col bg-white rounded-2xl p-7 border border-zinc-200/70 relative overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,0.05)]" style={{ transitionDelay: `${i * 80}ms` }}>
                   <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-25 blur-2xl pointer-events-none" style={{ backgroundColor: item.color }} />
-                  <div className="relative z-10">
+                  <div className="relative z-10 flex h-full flex-col">
                     <div className="flex items-center justify-between mb-6">
                       <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center border ${item.border}`}>
                       <iconify-icon icon={item.icon} width="22" style={{ color: item.color }}></iconify-icon>
@@ -420,8 +420,8 @@ export default function LandingPage() {
                       <span className="text-[28px] font-black text-zinc-500 leading-none">{item.step}</span>
                     </div>
                     <h3 className="text-lg font-black text-zinc-900 mb-2.5 tracking-tight">{item.title}</h3>
-                  <p className="text-zinc-800 text-[14px] leading-relaxed break-keep-all mb-6 font-normal tracking-normal">{item.desc}</p>
-                    <Link href={item.href} className={`flex items-center gap-1 text-[13px] font-medium ${item.ctaColor}`}>
+                    <p className="text-zinc-800 text-[14px] leading-relaxed break-keep-all pb-6 font-normal tracking-normal">{item.desc}</p>
+                    <Link href={item.href} className={`mt-auto flex items-center gap-1 text-[13px] font-medium ${item.ctaColor}`}>
                       {item.cta}
                     <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
                     </Link>

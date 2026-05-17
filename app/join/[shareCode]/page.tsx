@@ -54,9 +54,17 @@ export default function JoinPage() {
   const [authLoading, setAuthLoading] = useState(false);
   const [oauthSyncing, setOauthSyncing] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<number[]>(Array(8).fill(0));
+  const [answers, setAnswers] = useState<number[]>(Array(TPTI_QUESTIONS.length).fill(0));
   const [error, setError] = useState('');
   const autoJoinAttemptRef = useRef<string | null>(null);
+
+  const startFreshTpti = useCallback(() => {
+    autoJoinAttemptRef.current = null;
+    setCurrentQ(0);
+    setAnswers(Array(TPTI_QUESTIONS.length).fill(0));
+    setError('');
+    setStep('tpti');
+  }, []);
 
   const retryJoinWithSavedResult = useCallback(async (resultId: number) => {
     setError('');
@@ -123,7 +131,7 @@ export default function JoinPage() {
     if (tptiResult?.resultId) {
       if (tptiResult.userId !== user.id) {
         setTptiResult(null);
-        setStep('tpti');
+        startFreshTpti();
         return;
       }
 
@@ -143,7 +151,7 @@ export default function JoinPage() {
       return;
     }
 
-    setStep('tpti');
+    startFreshTpti();
   });
 
   useEffect(() => {
@@ -173,7 +181,7 @@ export default function JoinPage() {
             await retryJoinWithSavedResult(tptiResult.resultId);
           } else {
             if (tptiResult?.resultId) setTptiResult(null);
-            setStep('tpti');
+            startFreshTpti();
           }
           return;
         }
@@ -202,7 +210,7 @@ export default function JoinPage() {
     return () => {
       cancelled = true;
     };
-  }, [retryJoinWithSavedResult, router, setTptiResult, setUser, shareCode, tptiResult?.resultId, tptiResult?.userId]);
+  }, [retryJoinWithSavedResult, router, setTptiResult, setUser, shareCode, startFreshTpti, tptiResult?.resultId, tptiResult?.userId]);
 
   async function handleAuth(e: FormEvent) {
     e.preventDefault();
@@ -230,7 +238,7 @@ export default function JoinPage() {
       if (tptiResult?.resultId) {
         setTptiResult(null);
       }
-      setStep('tpti');
+      startFreshTpti();
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '인증에 실패했습니다. 다시 시도해주세요.'));
     } finally {
@@ -515,7 +523,7 @@ export default function JoinPage() {
                     if (tptiResult && user && tptiResult.userId !== user.id) {
                       setTptiResult(null);
                     }
-                    setStep('tpti');
+                    startFreshTpti();
                   }}
                 >
                   {tptiResult?.resultId && user && tptiResult.userId === user.id ? '저장된 결과로 다시 합류하기' : '여행 MBTI 검사 다시 진행하기'} <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>

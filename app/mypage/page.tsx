@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi, roomApi } from '@/lib/api/client';
@@ -121,8 +121,6 @@ export default function MyPage() {
       cancelled = true;
     };
   }, [user]);
-
-  const sortedRooms = useMemo(() => [...rooms].sort((a, b) => b.roomId - a.roomId), [rooms]);
 
   async function handleAuth(e: FormEvent) {
     e.preventDefault();
@@ -260,14 +258,14 @@ export default function MyPage() {
               {error && <div className="app-alert app-alert-danger mb-4"><p className="text-sm font-medium">{error}</p></div>}
               {loading ? (
                 <p className="text-sm font-normal text-zinc-700">여행 계획을 불러오는 중입니다…</p>
-              ) : sortedRooms.length === 0 ? (
+              ) : rooms.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center">
                   <p className="font-bold text-zinc-900">아직 참여 중인 여행 계획이 없습니다.</p>
                   <p className="mt-2 text-sm font-normal text-zinc-700">새 방을 만들거나 초대 링크로 참여해 보세요.</p>
                 </div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {sortedRooms.map((room) => (
+                  {rooms.map((room) => (
                     <Link key={room.roomId} href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="spring rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">{room.status}</span>

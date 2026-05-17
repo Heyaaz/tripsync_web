@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import ScheduleMapModalView from '@/components/schedule/ScheduleMapModalView';
+import { shareWithSystemFallback } from '@/lib/utils/webShare';
 import { useAuthStore } from '@/lib/store/auth';
 import { roomApi, scheduleApi } from '@/lib/api/client';
 import type { Place, Room, Schedule, ScheduleOption, ScheduleSlot } from '@/lib/types';
@@ -219,15 +220,29 @@ export default function SchedulePage() {
     }
   }
 
-  function copyShareLink() {
+  function showShareCopiedFeedback() {
+    setCopyDone(true);
+    window.setTimeout(() => setCopyDone(false), 2000);
+  }
+
+  async function shareSchedule() {
     const url = buildShareScheduleUrl(shareScheduleId ?? confirmedOption?.scheduleId ?? selectedOption?.scheduleId);
     if (!url) {
       return;
     }
-    navigator.clipboard.writeText(url).then(() => {
-      setCopyDone(true);
-      setTimeout(() => setCopyDone(false), 2000);
+
+    const destination = roomContext?.destination ? `${roomContext.destination} ` : '';
+    const result = await shareWithSystemFallback({
+      title: `${destination}TripSync 확정 일정`,
+      text: '동행자와 함께 확정한 TripSync 여행 일정을 확인해 보세요.',
+      url,
     });
+
+    if (result === 'copied') {
+      showShareCopiedFeedback();
+    } else if (result === 'failed') {
+      setError('공유 링크를 복사하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
   }
 
   function openDetailModal({
@@ -850,7 +865,7 @@ export default function SchedulePage() {
           <div className="app-topbar-title">확정된 일정</div>
           <div className="app-topbar-meta">동행자에게 공유할 최종 타임라인입니다</div>
         </div>
-        <button onClick={copyShareLink} className="app-link-button px-3 py-2 text-sm" type="button">
+        <button onClick={shareSchedule} className="app-link-button px-3 py-2 text-sm" type="button">
           <iconify-icon icon="solar:share-bold-duotone" width="18"></iconify-icon>
           {copyDone ? '복사됨' : '공유'}
         </button>
@@ -969,7 +984,7 @@ export default function SchedulePage() {
           )}
 
           <div className="flex flex-col gap-3 pb-8">
-            <button className="btn-primary py-4 text-base" onClick={copyShareLink}>
+            <button className="btn-primary py-4 text-base" onClick={shareSchedule}>
               {copyDone ? '링크가 클립보드에 복사되었습니다!' : '동행자들에게 일정 공유하기'}
             </button>
             <button

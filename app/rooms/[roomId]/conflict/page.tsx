@@ -153,17 +153,25 @@ export default function ConflictPage() {
     loadData();
   }, [roomId]);
 
-  function copyShareLink() {
+  async function shareInviteLink() {
     const code = roomContext?.shareCode;
     if (!code) {
       setError('초대 링크를 다시 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
-    const url = `${window.location.origin}/join/${code}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopyDone(true);
-      setTimeout(() => setCopyDone(false), 2000);
+
+    const result = await shareWithSystemFallback({
+      title: `${roomContext?.destination ?? 'TripSync'} 여행 계획 초대`,
+      text: 'TripSync에서 여행 MBTI 검사 후 여행 계획에 합류해 주세요.',
+      url: `${window.location.origin}/join/${code}`,
     });
+
+    if (result === 'copied') {
+      setCopyDone(true);
+      window.setTimeout(() => setCopyDone(false), 2000);
+    } else if (result === 'failed') {
+      setError('초대 링크를 공유하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    }
   }
 
   if (loading) {
@@ -212,7 +220,7 @@ export default function ConflictPage() {
             <div className="app-topbar-meta">{roomContext.destination} · {formatTripDateRange(roomContext.tripStartDate, roomContext.tripEndDate, roomContext.tripDate)} · 참여 {members.length}명</div>
           )}
         </div>
-        <button onClick={copyShareLink} className="app-link-button px-4 py-2 text-sm shrink-0" type="button">
+        <button onClick={shareInviteLink} className="app-link-button px-4 py-2 text-sm shrink-0" type="button">
           <iconify-icon icon="solar:share-bold-duotone" width="18"></iconify-icon>
           {copyDone ? '복사됨' : '초대 링크'}
         </button>
@@ -369,8 +377,8 @@ export default function ConflictPage() {
             </div>
             <h3 className="text-2xl font-black tracking-tight mb-2 text-zinc-900">동행자를 기다리고 있어요</h3>
             <p className="text-sm text-zinc-700 font-normal leading-relaxed mb-8 max-w-[260px]">최소 2명이 검사를 완료해야 서로의 취향 차이를 보여주는 지도가 만들어집니다.</p>
-            <button onClick={copyShareLink} className="btn-primary w-full max-w-[200px]">
-              {copyDone ? '링크 복사 완료!' : '초대 링크 복사'}
+            <button onClick={shareInviteLink} className="btn-primary w-full max-w-[200px]">
+              {copyDone ? '링크 복사 완료!' : '초대 링크 공유'}
             </button>
           </div>
         )}

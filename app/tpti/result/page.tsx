@@ -1,11 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { ScoreBars } from '@/components/tpti/ScoreBars';
 import { AXIS_COLORS, AXIS_DESCRIPTIONS, AXIS_LABELS, getCharacter } from '@/lib/utils/tpti';
+import { shareWithSystemFallback } from '@/lib/utils/webShare';
 
 const AXIS_ICONS = {
   mobility: 'solar:map-point-wave-bold-duotone',
@@ -32,84 +32,10 @@ const GRADIENTS = [
   'from-green-400 to-cyan-500',
 ];
 
-const KAKAO_SHARE_SDK_ID = 'kakao-share-sdk';
-const KAKAO_SHARE_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.8.0/kakao.min.js';
-
-let kakaoShareSdkPromise: Promise<KakaoJsSdk> | null = null;
-
-function getKakaoJavascriptKey() {
-  return process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY ?? process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY ?? '';
-}
-
-function loadKakaoShareSdk(): Promise<KakaoJsSdk> {
-  const appKey = getKakaoJavascriptKey();
-  if (!appKey) {
-    return Promise.reject(new Error('KAKAO_JS_KEY_MISSING'));
-  }
-
-  if (window.Kakao?.Share) {
-    if (!window.Kakao.isInitialized()) {
-      window.Kakao.init(appKey);
-    }
-    return Promise.resolve(window.Kakao);
-  }
-
-  if (kakaoShareSdkPromise) {
-    return kakaoShareSdkPromise;
-  }
-
-  kakaoShareSdkPromise = new Promise((resolve, reject) => {
-    const initialize = () => {
-      const kakao = window.Kakao;
-      if (!kakao?.Share) {
-        kakaoShareSdkPromise = null;
-        reject(new Error('KAKAO_SDK_LOAD_FAILED'));
-        return;
-      }
-
-      if (!kakao.isInitialized()) {
-        kakao.init(appKey);
-      }
-
-      resolve(kakao);
-    };
-
-    const existing = document.getElementById(KAKAO_SHARE_SDK_ID) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', initialize, { once: true });
-      existing.addEventListener('error', () => {
-        kakaoShareSdkPromise = null;
-        reject(new Error('KAKAO_SDK_LOAD_FAILED'));
-      }, { once: true });
-
-      if (window.Kakao?.Share) {
-        initialize();
-      }
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.id = KAKAO_SHARE_SDK_ID;
-    script.src = KAKAO_SHARE_SDK_URL;
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    script.onload = initialize;
-    script.onerror = () => {
-      kakaoShareSdkPromise = null;
-      reject(new Error('KAKAO_SDK_LOAD_FAILED'));
-    };
-    document.head.appendChild(script);
-  });
-
-  return kakaoShareSdkPromise;
-}
-
 export default function TptiResultPage() {
   const router = useRouter();
   const { tptiResult, currentRoom } = useAuthStore();
   const [shareFeedback, setShareFeedback] = useState('');
-  const [sharingProvider, setSharingProvider] = useState<'kakao' | 'instagram' | null>(null);
-  const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!tptiResult) router.replace('/tpti');
@@ -143,71 +69,25 @@ export default function TptiResultPage() {
     }, 2500);
   }
 
-  async function copyShareUrl() {
-    if (!shareUrl) return false;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async function handleKakaoShare() {
+  async function handleSystemShare() {
     if (!shareUrl) {
       updateShareFeedback('공유용 결과를 아직 준비하지 못했어요.');
       return;
     }
 
-    setSharingProvider('kakao');
-    try {
-      const kakao = await loadKakaoShareSdk();
-      await kakao.Share.sendScrap({ requestUrl: shareUrl });
-      setShareSheetOpen(false);
-      updateShareFeedback('카카오톡 공유창을 열었어요.');
-    } catch {
-      const copied = await copyShareUrl();
-      updateShareFeedback(copied ? '카카오 공유 대신 링크를 복사했어요.' : '카카오 공유를 열지 못했어요.');
-    } finally {
-      setSharingProvider(null);
+    const result = await shareWithSystemFallback({
+      title: shareTitle,
+      text: shareText,
+      url: shareUrl,
+    });
+
+    if (result === 'shared') {
+      updateShareFeedback('공유 화면을 열었어요.');
+    } else if (result === 'copied') {
+      updateShareFeedback('공유 링크를 복사했어요.');
+    } else if (result === 'failed') {
+      updateShareFeedback('공유 링크를 복사하지 못했어요.');
     }
-  }
-
-  async function handleInstagramShare() {
-    if (!shareUrl) {
-      updateShareFeedback('공유용 결과를 아직 준비하지 못했어요.');
-      return;
-    }
-
-    setSharingProvider('instagram');
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl,
-        });
-        setShareSheetOpen(false);
-        updateShareFeedback('공유 화면을 열었어요.');
-        return;
-      }
-
-      const copied = await copyShareUrl();
-      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
-      setShareSheetOpen(false);
-      updateShareFeedback(copied ? '링크를 복사하고 인스타그램을 열었어요.' : '인스타그램을 열었어요.');
-    } catch {
-      const copied = await copyShareUrl();
-      updateShareFeedback(copied ? '인스타 공유용 링크를 복사했어요.' : '인스타 공유를 열지 못했어요.');
-    } finally {
-      setSharingProvider(null);
-    }
-  }
-
-  async function handleCopyShareLink() {
-    const copied = await copyShareUrl();
-    setShareSheetOpen(false);
-    updateShareFeedback(copied ? '공유 링크를 복사했어요.' : '공유 링크를 복사하지 못했어요.');
   }
 
   return (
@@ -244,7 +124,7 @@ export default function TptiResultPage() {
                   <div className="ml-auto relative flex flex-wrap items-center justify-end gap-2">
                     <button
                       type="button"
-                      onClick={() => setShareSheetOpen((prev) => !prev)}
+                      onClick={handleSystemShare}
                       aria-label="공유하기"
                       title="공유하기"
                       className="app-link-button min-h-[2.5rem] rounded-full px-4 py-2 text-sm font-bold text-zinc-700"
@@ -252,104 +132,12 @@ export default function TptiResultPage() {
                       <iconify-icon icon="solar:share-bold-duotone" width="18"></iconify-icon>
                       공유하기
                     </button>
-
-                    {shareSheetOpen ? (
-                      <>
-                        <button
-                          type="button"
-                          aria-label="공유 메뉴 닫기"
-                          className="fixed inset-0 z-10 cursor-default"
-                          onClick={() => setShareSheetOpen(false)}
-                        />
-                        <div className="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-[272px] overflow-hidden rounded-[26px] border border-zinc-200/90 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
-                          <div className="h-1.5 bg-gradient-to-r from-blue-400/70 via-violet-300/50 to-emerald-300/60" />
-                          <div className="p-4">
-                          <div className="mb-4 flex items-center justify-between">
-                            <div>
-                              <div className="text-sm font-bold text-zinc-900">공유하기</div>
-                              <div className="text-xs font-medium text-zinc-500">원하는 채널을 선택해 주세요</div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setShareSheetOpen(false)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-                              aria-label="공유 메뉴 닫기"
-                            >
-                              <iconify-icon icon="solar:close-circle-linear" width="18"></iconify-icon>
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={handleKakaoShare}
-                              disabled={sharingProvider !== null}
-                              className="group flex flex-col items-center gap-2.5 rounded-[20px] border border-zinc-100 bg-[linear-gradient(180deg,#ffffff_0%,#fafafa_100%)] px-3 py-3.5 text-center shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-200 hover:shadow-[0_12px_22px_rgba(15,23,42,0.06)] disabled:opacity-60"
-                            >
-                              <Image
-                                src="/icons/kakaotalk.svg"
-                                alt=""
-                                aria-hidden="true"
-                                width={54}
-                                height={54}
-                                className="transition-transform duration-300 group-hover:scale-[1.05]"
-                              />
-                              <span className="text-[13px] font-semibold tracking-tight text-zinc-800">
-                                {sharingProvider === 'kakao' ? '공유 중' : '카카오'}
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={handleInstagramShare}
-                              disabled={sharingProvider !== null}
-                              className="group flex flex-col items-center gap-2.5 rounded-[20px] border border-zinc-100 bg-[linear-gradient(180deg,#ffffff_0%,#fafafa_100%)] px-3 py-3.5 text-center shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-200 hover:shadow-[0_12px_22px_rgba(15,23,42,0.06)] disabled:opacity-60"
-                            >
-                              <Image
-                                src="/icons/instagram-custom.svg"
-                                alt=""
-                                aria-hidden="true"
-                                width={54}
-                                height={54}
-                                className="transition-transform duration-300 group-hover:scale-[1.05]"
-                              />
-                              <span className="text-[13px] font-semibold tracking-tight text-zinc-800">
-                                {sharingProvider === 'instagram' ? '공유 중' : '인스타'}
-                              </span>
-                            </button>
-                          </div>
-                          
-                          <button
-                            type="button"
-                            onClick={handleCopyShareLink}
-                            disabled={sharingProvider !== null}
-                            className="mt-3 flex w-full items-center justify-between rounded-[18px] border border-zinc-100 bg-zinc-50/90 px-4 py-3 text-left transition-colors hover:bg-zinc-100 disabled:opacity-60"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-blue-50 text-blue-600">
-                                <iconify-icon icon="solar:link-round-bold" width="18"></iconify-icon>
-                              </span>
-                              <div>
-                                <div className="text-[13px] font-semibold tracking-tight text-zinc-900">링크 복사</div>
-                                <div className="text-[11px] font-medium text-zinc-500">공유 URL을 클립보드에 저장</div>
-                              </div>
-                            </div>
-                            <iconify-icon icon="solar:copy-linear" width="18" className="text-zinc-400"></iconify-icon>
-                          </button>
-                          {/*
-                            Keep the sheet compact: two primary share targets on top,
-                            utility copy action as a full-width secondary row.
-                          */}
-                          </div>
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
                   {shareFeedback ? (
                     <div className="basis-full pt-1 text-right text-sm font-medium text-zinc-600">
                       {shareFeedback}
                     </div>
                   ) : null}
+                  </div>
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_320px] lg:items-start">

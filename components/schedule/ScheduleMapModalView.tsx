@@ -393,7 +393,7 @@ export default function ScheduleMapModalView({
   }, [appKey, fallbackOrderIndex, isSingleSlotView, orderedSlots, selectedOrderIndex, slotsWithCoords]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-zinc-50">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-50">
       <div className="shrink-0 border-b border-zinc-100 bg-white px-5 py-4">
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
@@ -412,7 +412,7 @@ export default function ScheduleMapModalView({
         ) : null}
       </div>
 
-      <div className="relative min-h-[220px] flex-1 bg-zinc-100">
+      <div className="relative min-h-0 flex-1 bg-zinc-100">
         {!appKey ? (
           <div className="flex h-full items-center justify-center p-6">
             <div className="max-w-xs rounded-[22px] border border-zinc-200 bg-white px-5 py-6 text-center shadow-sm">
@@ -457,7 +457,8 @@ export default function ScheduleMapModalView({
         )}
       </div>
 
-      <div className="max-h-[34dvh] shrink-0 overflow-y-auto border-t border-zinc-100 bg-white px-4 py-3">
+      {!isSingleSlotView ? (
+        <div className="max-h-[34dvh] shrink-0 overflow-y-auto border-t border-zinc-100 bg-white px-4 py-3">
         {selectedSlot ? (
           <div className="mb-3 rounded-[18px] border border-blue-100 bg-blue-50/70 px-3 py-3">
             <div className="flex items-start gap-2">
@@ -469,8 +470,7 @@ export default function ScheduleMapModalView({
                 <p className="mt-0.5 truncate text-xs font-normal text-zinc-700">{selectedSlot.place.address}</p>
               </div>
             </div>
-            {!isSingleSlotView ? (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span className="mr-1 text-[11px] font-semibold text-zinc-500">순서</span>
                 <button
                   type="button"
@@ -497,9 +497,7 @@ export default function ScheduleMapModalView({
                   ↓ 뒤로
                 </button>
               </div>
-            ) : null}
-            {selectedSlot ? (
-              <a
+            <a
                 href={buildKakaoMapUrl(selectedSlot)}
                 target="_blank"
                 rel="noreferrer"
@@ -508,11 +506,9 @@ export default function ScheduleMapModalView({
                 <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
                 카카오맵에서 열기
               </a>
-            ) : null}
           </div>
         ) : null}
 
-        {!isSingleSlotView ? (
           <div className="max-h-[96px] space-y-1.5 overflow-y-auto pr-1">
             {orderedSlots.map((slot, index) => {
               const isSelected = slot.orderIndex === selectedOrderIndex;
@@ -588,8 +584,8 @@ export default function ScheduleMapModalView({
               );
             })}
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

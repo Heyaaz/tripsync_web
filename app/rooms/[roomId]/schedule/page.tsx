@@ -726,7 +726,7 @@ export default function SchedulePage() {
         {detailModalSlot && (
           <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
             <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setDetailModalSlot(null)} />
-            <div className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-y-auto rounded-[24px] bg-white shadow-2xl animate-fadeInUp">
+            <div className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-[24px] bg-white shadow-2xl animate-fadeInUp">
               
               <button 
                 onClick={() => setDetailModalSlot(null)}
@@ -780,26 +780,34 @@ export default function SchedulePage() {
                       <div className="text-[14px] text-zinc-700 leading-relaxed font-normal mb-8 whitespace-pre-wrap break-keep-all">
                         {detailModalSlot.slot.place.description}
                       </div>
-                    ) : (
-                      <div className="text-[13px] text-zinc-600 leading-relaxed font-normal mb-8 text-center bg-zinc-50 py-3 rounded-lg border border-dashed border-zinc-200">
-                        AI 제안 장소입니다. 방문 전 운영 정보를 확인하세요.
-                      </div>
-                    )}
+                    ) : null}
 
-                    <div className="flex gap-2">
-                      <button onClick={() => setDetailModalSlot(null)} className="flex-1 py-3.5 text-sm font-bold text-white bg-zinc-900 rounded-xl hover:bg-zinc-800 transition-colors shadow-[0_4px_14px_rgba(0,0,0,0.15)] focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900">
-                        확인
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setMapScope('slot');
-                          setModalView('map');
-                        }}
-                        className="flex-none px-4 py-3.5 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5"
-                      >
-                        <iconify-icon icon="solar:map-point-wave-bold-duotone" width="16"></iconify-icon>일정 지도 보기
-                      </button>
+                    <div className="mb-6 overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-50">
+                      <div className="h-[360px] overflow-hidden">
+                        <ScheduleMapModalView
+                          key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
+                          slots={[detailModalSlot.slot]}
+                          initialOrderIndex={detailModalSlot.slot.orderIndex}
+                          scheduleTitle={`${detailModalSlot.scheduleTitle} → ${detailModalSlot.slot.place.name}`}
+                          scheduleSummary={detailModalSlot.slot.place.address}
+                        />
+                      </div>
+                      <div className="border-t border-zinc-100 bg-white px-4 py-3">
+                        <a
+                          href={`https://map.kakao.com/link/search/${encodeURIComponent(detailModalSlot.slot.place.name)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-bold text-blue-700 transition hover:bg-blue-100"
+                        >
+                          <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
+                          카카오맵에서 열기
+                        </a>
+                      </div>
                     </div>
+
+                    <button onClick={() => setDetailModalSlot(null)} className="w-full py-3.5 text-sm font-bold text-white bg-zinc-900 rounded-xl hover:bg-zinc-800 transition-colors shadow-[0_4px_14px_rgba(0,0,0,0.15)] focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900">
+                      확인
+                    </button>
                   </div>
                 </>
               ) : (
@@ -1064,7 +1072,7 @@ export default function SchedulePage() {
       {detailModalSlot ? (
         <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
           <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setDetailModalSlot(null)} />
-          <div className={`relative my-auto flex w-full max-w-sm flex-col rounded-[24px] bg-white shadow-2xl animate-fadeInUp ${
+          <div className={`relative my-auto flex w-full max-w-md flex-col rounded-[24px] bg-white shadow-2xl animate-fadeInUp ${
             modalView === 'map'
               ? 'h-[calc(100dvh-2rem)] max-h-[640px] overflow-hidden sm:h-[560px]'
               : 'max-h-[calc(100dvh-2rem)] overflow-y-auto'
@@ -1113,30 +1121,37 @@ export default function SchedulePage() {
                   <div className="mb-8 whitespace-pre-wrap break-keep-all text-[14px] font-normal leading-relaxed text-zinc-700">
                     {cleanDisplayText(detailModalSlot.slot.place.description)}
                   </div>
-                ) : (
-                  <div className="mb-8 rounded-lg border border-dashed border-zinc-200 bg-zinc-50 py-3 text-center text-[13px] font-normal leading-relaxed text-zinc-600">
-                    AI 제안 장소입니다. 방문 전 운영 정보를 확인하세요.
-                  </div>
-                )}
+                ) : null}
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setDetailModalSlot(null)}
-                    className="flex-1 rounded-xl bg-zinc-900 py-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-colors hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2"
-                  >
-                    확인
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMapScope('slot');
-                      setModalView('map');
-                    }}
-                    className="flex flex-none items-center justify-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
-                  >
-                    <iconify-icon icon="solar:map-point-wave-bold-duotone" width="16"></iconify-icon>
-                    일정 지도 보기
-                  </button>
+                <div className="mb-6 overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-50">
+                  <div className="h-[360px] overflow-hidden">
+                    <ScheduleMapModalView
+                      key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
+                      slots={[detailModalSlot.slot]}
+                      initialOrderIndex={detailModalSlot.slot.orderIndex}
+                      scheduleTitle={`${detailModalSlot.scheduleTitle} → ${detailModalSlot.slot.place.name}`}
+                      scheduleSummary={detailModalSlot.slot.place.address}
+                    />
+                  </div>
+                  <div className="border-t border-zinc-100 bg-white px-4 py-3">
+                    <a
+                      href={`https://map.kakao.com/link/search/${encodeURIComponent(detailModalSlot.slot.place.name)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
+                      카카오맵에서 열기
+                    </a>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => setDetailModalSlot(null)}
+                  className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-colors hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2"
+                >
+                  확인
+                </button>
               </div>
             ) : (
               <>

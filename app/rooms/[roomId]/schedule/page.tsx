@@ -903,7 +903,7 @@ export default function SchedulePage() {
   return (
     <div className="app-shell app-page">
       <div className="app-topbar">
-        <button onClick={() => setPhase('options')} className="app-icon-button" aria-label="옵션으로 돌아가기">
+        <button onClick={() => router.push('/')} className="app-icon-button" aria-label="홈으로 돌아가기">
           <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
         </button>
         <div className="min-w-0 flex-1 text-center">

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, tptiApi, roomApi } from '@/lib/api/client';
@@ -461,20 +460,25 @@ export default function JoinPage() {
                   </button>
                 </form>
 
-                <div className="my-6 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-zinc-200" />
-                  <span className="text-xs font-semibold text-zinc-500">또는</span>
-                  <div className="h-px flex-1 bg-zinc-200" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <a className="btn-secondary justify-center gap-2" href={authApi.getOAuthStartUrl('google', `/join/${shareCode}`)}>
-                    <iconify-icon icon="logos:google-icon" width="20"></iconify-icon>
-                    <span>Google</span>
+                <div className="mt-4 space-y-3">
+                  <a
+                    className="btn-secondary flex gap-3 w-full"
+                    href={authApi.getOAuthStartUrl('google', `/join/${shareCode}`)}
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                      <iconify-icon icon="logos:google-icon" width="20"></iconify-icon>
+                    </span>
+                    <span>Google로 시작하기</span>
                   </a>
-                  <a className="btn-secondary justify-center gap-2" href={authApi.getOAuthStartUrl('kakao', `/join/${shareCode}`)}>
-                    <Image src="/icons/kakaotalk.svg" alt="" width={20} height={20} className="rounded-md" />
-                    <span>Kakao</span>
+
+                  <a
+                    className="btn-kakao"
+                    href={authApi.getOAuthStartUrl('kakao', `/join/${shareCode}`)}
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                      <iconify-icon icon="solar:chat-round-bold" width="19" style={{ color: '#191600' }}></iconify-icon>
+                    </span>
+                    <span>카카오로 시작하기</span>
                   </a>
                 </div>
 

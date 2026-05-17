@@ -330,7 +330,7 @@ export default function RoomsNewPage() {
                   <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">
                     {authMode === 'login' ? '방장 로그인' : '방장 회원가입'}
                   </h2>
-                  <p className="body-md mb-8 text-zinc-700">동행자는 가입 없이 공유 링크로 바로 참여할 수 있습니다.</p>
+                  <p className="body-md mb-8 text-zinc-700">동행자는 초대 링크에서 계정으로 로그인한 뒤 참여할 수 있습니다.</p>
 
                   <form onSubmit={handleAuth} className="flex flex-col gap-5">
                     {authMode === 'register' && (

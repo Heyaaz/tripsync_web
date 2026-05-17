@@ -97,9 +97,18 @@ function HomeAuthActions() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="hidden max-w-[120px] truncate text-[13px] font-semibold text-zinc-700 sm:inline">
-        {user.nickname}
-      </span>
+      <Link
+        href="/mypage"
+        className="spring hidden max-w-[140px] truncate rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-[13px] font-bold text-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.08)] sm:inline-flex"
+      >
+        {user.nickname} · 마이페이지
+      </Link>
+      <Link
+        href="/mypage"
+        className="spring inline-flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.08)] sm:hidden"
+      >
+        마이페이지
+      </Link>
       <button
         type="button"
         onClick={handleLogout}
@@ -164,7 +173,7 @@ function MyRoomsPanel() {
             <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
             내 여행 계획
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-zinc-900">만든 방으로 다시 이동</h2>
+          <h2 className="text-2xl font-black tracking-tight text-zinc-900">내 여행 계획으로 다시 이동</h2>
           <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
             홈으로 돌아와도 참여 중인 여행 계획을 바로 이어서 확인할 수 있습니다.
           </p>

@@ -37,22 +37,28 @@ function isRoomPayload(value: unknown): value is RoomPayload {
 }
 
 function roomEntryHref(room: Room) {
-  return room.status === 'completed' ? `/rooms/${room.roomId}/schedule` : `/rooms/${room.roomId}/conflict`;
+  return room.status === 'completed' || room.hasGeneratedSchedule ? `/rooms/${room.roomId}/schedule` : `/rooms/${room.roomId}/conflict`;
 }
 
 function roomEntryLabel(room: Room) {
+  if (room.confirmedScheduleId) return '확정 일정으로 이동';
+  if (room.hasGeneratedSchedule) return '생성한 일정 이어보기';
   if (room.status === 'completed') return '확정 일정으로 이동';
   if (room.status === 'ready') return '궁합 지도에서 일정 만들기';
   return '방으로 다시 이동';
 }
 
 function roomStatusLabel(room: Room) {
+  if (room.confirmedScheduleId) return '확정 완료';
+  if (room.hasGeneratedSchedule) return '일정 선택 대기';
   if (room.status === 'completed') return '확정 완료';
   if (room.status === 'ready') return '일정 생성 가능';
   return '대기 중';
 }
 
 function roomStatusClassName(room: Room) {
+  if (room.confirmedScheduleId) return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+  if (room.hasGeneratedSchedule) return 'bg-purple-50 text-purple-700 ring-purple-100';
   if (room.status === 'completed') return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
   if (room.status === 'ready') return 'bg-blue-50 text-blue-700 ring-blue-100';
   return 'bg-amber-50 text-amber-700 ring-amber-100';

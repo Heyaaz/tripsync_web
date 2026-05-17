@@ -61,8 +61,6 @@ export const roomApi = {
 
   getMembers: (id: number) => apiClient.get(`/rooms/${id}/members`),
 
-  getConfirmedSchedule: (id: number) => apiClient.get(`/rooms/${id}/confirmed-schedule`),
-
   getConflictMap: (id: number) => apiClient.get(`/rooms/${id}/conflict-map`),
 
   generateSchedule: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>

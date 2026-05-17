@@ -157,19 +157,27 @@ export default function SchedulePage() {
 
     async function hydrateInitialScheduleState() {
       try {
-        await hydrateRoomContext();
-        const confirmedRes = await roomApi.getConfirmedSchedule(roomId);
-        const confirmedSchedule = confirmedRes.data?.data as Schedule | undefined;
+        const activeRoom = await hydrateRoomContext();
+        const scheduleState = activeRoom.scheduleState;
         if (!isMounted) return;
 
-        if (confirmedSchedule?.isConfirmed) {
-          setConfirmedOption(normalizeConfirmedSchedule(confirmedSchedule));
-          setShareScheduleId(confirmedSchedule.id);
+        if (scheduleState?.status === 'confirmed' && scheduleState.confirmedSchedule) {
+          setConfirmedOption(normalizeConfirmedSchedule(scheduleState.confirmedSchedule));
+          setShareScheduleId(scheduleState.confirmedSchedule.id);
           setPhase('confirmed');
           return;
         }
+
+        if (scheduleState?.status === 'generated' && scheduleState.options?.length) {
+          const generatedOptions = scheduleState.options.map(normalizeConfirmedSchedule);
+          setOptions(generatedOptions);
+          setSelectedOption(generatedOptions[0] ?? null);
+          setExpandedOption(generatedOptions[0]?.optionType ?? null);
+          setPhase('options');
+          return;
+        }
       } catch {
-        // 확정 일정이 없거나 초기 조회가 실패한 경우 기존 생성 진입 화면을 보여준다.
+        // 초기 조회가 실패하면 사용자가 다시 생성/조회할 수 있도록 기본 진입 화면을 보여준다.
       }
 
       if (isMounted) setPhase('generate');

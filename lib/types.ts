@@ -52,6 +52,14 @@ export interface Room {
   hostUserId: number;
   memberCount: number;
   createdAt: string;
+  hasGeneratedSchedule?: boolean;
+  confirmedScheduleId?: number | null;
+  latestScheduleVersion?: number | null;
+  scheduleState?: {
+    status: 'empty' | 'generated' | 'confirmed';
+    confirmedSchedule?: Schedule | null;
+    options?: Schedule[];
+  };
 }
 
 export interface RoomMember {

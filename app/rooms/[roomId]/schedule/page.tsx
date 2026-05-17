@@ -984,7 +984,21 @@ export default function SchedulePage() {
           )}
 
           <div className="flex flex-col gap-3 pb-8">
-            <button className="btn-primary py-4 text-base" onClick={shareSchedule}>
+            <button
+              className="btn-primary py-4 text-base !bg-emerald-600 hover:!bg-emerald-700"
+              onClick={() => {
+                const scheduleId = confirmedOption?.scheduleId ?? shareScheduleId;
+                if (!scheduleId) {
+                  setError('사진첩을 열기 위한 일정 정보를 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+                  return;
+                }
+                router.push(`/schedules/${scheduleId}/album`);
+              }}
+            >
+              <iconify-icon icon="solar:gallery-wide-bold-duotone" width="19"></iconify-icon>
+              장소별 공유 사진첩 열기
+            </button>
+            <button className="btn-secondary py-4 text-base" onClick={shareSchedule}>
               {copyDone ? '링크가 클립보드에 복사되었습니다!' : '동행자들에게 일정 공유하기'}
             </button>
             <button

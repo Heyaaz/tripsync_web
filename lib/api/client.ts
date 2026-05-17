@@ -82,4 +82,16 @@ export const scheduleApi = {
     apiClient.patch(`/schedules/${id}/slots/order`, data),
   regenerate: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>
     apiClient.post(`/schedules/${id}/regenerate`, data),
+  getAlbum: (id: number) => apiClient.get(`/schedules/${id}/album`),
+  uploadPhoto: (id: number, slotId: number, data: FormData) =>
+    apiClient.post(`/schedules/${id}/album/slots/${slotId}/photos`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+    }),
+  updatePhotoCaption: (id: number, photoId: number, data: { caption: string }) =>
+    apiClient.patch(`/schedules/${id}/album/photos/${photoId}`, data),
+  deletePhoto: (id: number, photoId: number) =>
+    apiClient.delete(`/schedules/${id}/album/photos/${photoId}`),
+  getPhotoContentUrl: (id: number, photoId: number) =>
+    `/api/schedules/${id}/album/photos/${photoId}/content`,
 };

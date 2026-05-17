@@ -203,6 +203,46 @@ export interface PublicShareSchedule {
   }>;
 }
 
+
+// ─── 공유 사진첩 ─────────────────────────────────────────
+export type TripPhotoStatus = 'active' | 'hidden' | 'deleted';
+
+export interface TripPhoto {
+  photoId: number;
+  scheduleId: number;
+  scheduleSlotId: number;
+  placeId: number;
+  uploaderUserId: number;
+  uploaderNickname: string;
+  caption?: string | null;
+  contentType: string;
+  sizeBytes: number;
+  status: TripPhotoStatus;
+  imageUrl?: string;
+  contentUrl?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TripPhotoAlbumSlot {
+  scheduleSlotId: number;
+  orderIndex: number;
+  startTime?: string;
+  endTime?: string;
+  place: Place;
+  photos: TripPhoto[];
+}
+
+export interface TripPhotoAlbum {
+  scheduleId: number;
+  roomId: number;
+  destination?: string;
+  tripDate?: string;
+  isConfirmed: boolean;
+  totalPhotoCount: number;
+  slots: TripPhotoAlbumSlot[];
+}
+
 // ─── API 공통 응답 ────────────────────────────────────────
 export interface ApiResponse<T> {
   success: boolean;

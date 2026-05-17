@@ -444,8 +444,9 @@ export default function LandingPage() {
                 <h3 className="text-3xl md:text-[42px] font-black text-zinc-900 mb-5 leading-[1.1] tracking-tight break-keep-all">
                   아무도 소외되지 않는<br />여행 일정을 만듭니다.
                 </h3>
-              <p className="text-zinc-800 text-[16px] leading-relaxed break-keep-all max-w-md font-normal tracking-normal mb-8">
-                  전국 명소 데이터를 기반으로 그룹 구성원의 취향 궁합을 분석해, AI가 3가지 맞춤 여행 코스를 제안합니다.
+                <p className="text-zinc-800 text-[16px] leading-relaxed break-keep-all max-w-md font-normal tracking-normal mb-8">
+                  전국 명소 데이터를 기반으로 그룹 구성원의 취향 궁합을 분석해,<br />
+                  AI가 3가지 맞춤 여행 코스를 제안합니다.
                 </p>
                 <Link
                   href="/rooms/new"

@@ -11,6 +11,7 @@ import {
 import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
 import { normalizeRoomSummary } from '@/lib/utils/room';
+import { shareWithSystemFallback } from '@/lib/utils/webShare';
 import type { ConflictAxis, ConflictMap, Room, RoomMember, TptiScores } from '@/lib/types';
 
 
@@ -222,7 +223,7 @@ export default function ConflictPage() {
         </div>
         <button onClick={shareInviteLink} className="app-link-button px-4 py-2 text-sm shrink-0" type="button">
           <iconify-icon icon="solar:share-bold-duotone" width="18"></iconify-icon>
-          {copyDone ? '복사됨' : '초대 링크'}
+          {copyDone ? '복사됨' : '초대'}
         </button>
       </div>
 
@@ -378,7 +379,7 @@ export default function ConflictPage() {
             <h3 className="text-2xl font-black tracking-tight mb-2 text-zinc-900">동행자를 기다리고 있어요</h3>
             <p className="text-sm text-zinc-700 font-normal leading-relaxed mb-8 max-w-[260px]">최소 2명이 검사를 완료해야 서로의 취향 차이를 보여주는 지도가 만들어집니다.</p>
             <button onClick={shareInviteLink} className="btn-primary w-full max-w-[200px]">
-              {copyDone ? '링크 복사 완료!' : '초대 링크 공유'}
+              {copyDone ? '링크 복사 완료!' : '초대'}
             </button>
           </div>
         )}

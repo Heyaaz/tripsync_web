@@ -103,7 +103,7 @@ export default function SchedulePage() {
   const { currentRoom, setCurrentRoom } = useAuthStore();
 
   const [roomContext, setRoomContext] = useState<Room | null>(currentRoom?.roomId === roomId ? currentRoom : null);
-  const [phase, setPhase] = useState<'generate' | 'generating' | 'options' | 'confirmed'>('generate');
+  const [phase, setPhase] = useState<'loading' | 'generate' | 'generating' | 'options' | 'confirmed'>('loading');
   const [options, setOptions] = useState<ScheduleOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ScheduleOption | null>(null);
   const [confirmedOption, setConfirmedOption] = useState<ScheduleOption | null>(null);
@@ -153,10 +153,34 @@ export default function SchedulePage() {
   }, [roomId, setCurrentRoom]);
 
   useEffect(() => {
-    void hydrateRoomContext().catch(() => {
-      // 화면 진입 시 에러는 생성/확정 액션에서 다시 사용자에게 노출한다.
-    });
-  }, [hydrateRoomContext]);
+    let isMounted = true;
+
+    async function hydrateInitialScheduleState() {
+      try {
+        await hydrateRoomContext();
+        const confirmedRes = await roomApi.getConfirmedSchedule(roomId);
+        const confirmedSchedule = confirmedRes.data?.data as Schedule | undefined;
+        if (!isMounted) return;
+
+        if (confirmedSchedule?.isConfirmed) {
+          setConfirmedOption(normalizeConfirmedSchedule(confirmedSchedule));
+          setShareScheduleId(confirmedSchedule.id);
+          setPhase('confirmed');
+          return;
+        }
+      } catch {
+        // 확정 일정이 없거나 초기 조회가 실패한 경우 기존 생성 진입 화면을 보여준다.
+      }
+
+      if (isMounted) setPhase('generate');
+    }
+
+    void hydrateInitialScheduleState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hydrateRoomContext, roomId]);
 
   useEffect(() => {
     if (phase !== 'generating') {
@@ -390,6 +414,19 @@ export default function SchedulePage() {
     } finally {
       setAddingPlaceId(null);
     }
+  }
+
+  // ── PHASE: loading ───────────────────────────────────────
+  if (phase === 'loading') {
+    return (
+      <div className="app-shell app-page items-center justify-center">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-6 h-14 w-14 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
+          <h1 className="text-2xl font-black tracking-tight text-zinc-900">일정 상태를 확인하는 중…</h1>
+          <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">확정된 여행 일정이 있으면 바로 불러올게요.</p>
+        </div>
+      </div>
+    );
   }
 
   // ── PHASE: generate ──────────────────────────────────────

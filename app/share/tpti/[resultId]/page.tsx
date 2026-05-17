@@ -15,12 +15,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description: `활동성 ${data.scores.mobility} · 기록 ${data.scores.photo} · 예산 ${data.scores.budget} · 테마 ${data.scores.theme}`,
         openGraph: {
           title: `나의 여행 유형은? ${data.characterName}`,
-          description: 'TripSync TPTI 검사로 여행 취향을 알아보세요!',
+          description: 'TripSync 여행 MBTI 검사로 여행 취향을 알아보세요!',
         },
       };
     }
   } catch { /* fallback */ }
-  return { title: 'TPTI 여행 유형 결과 | TripSync' };
+  return { title: '여행 MBTI 여행 유형 결과 | TripSync' };
 }
 
 export default function ShareTptiPage() {
@@ -33,9 +33,9 @@ export default function ShareTptiPage() {
               <iconify-icon icon="solar:compass-bold-duotone" width="30" className="text-blue-500"></iconify-icon>
             </div>
             <span className="app-kicker mb-4">Shared Result</span>
-            <h1 className="text-3xl font-black tracking-tight text-zinc-900 mb-3">공유된 TPTI 결과입니다</h1>
+            <h1 className="text-3xl font-black tracking-tight text-zinc-900 mb-3">공유된 여행 MBTI 결과입니다</h1>
             <p className="text-sm font-normal text-zinc-700 leading-relaxed mb-8">
-              더 자세한 결과 해석과 여행방 연결은 TripSync 앱 화면에서 확인할 수 있습니다.
+              더 자세한 결과 해석과 여행 계획 연결은 TripSync 앱 화면에서 확인할 수 있습니다.
             </p>
             <Link href="/" className="btn-primary inline-flex w-auto px-6">
               TripSync 홈으로 이동

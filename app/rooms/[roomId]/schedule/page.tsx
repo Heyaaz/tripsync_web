@@ -387,7 +387,7 @@ export default function SchedulePage() {
           </button>
           <div className="min-w-0 flex-1 text-center">
             <div className="app-topbar-title">AI 합의 일정</div>
-            <div className="app-topbar-meta">갈등 지도를 바탕으로 3가지 일정 옵션을 생성합니다</div>
+            <div className="app-topbar-meta">궁합 지도를 바탕으로 3가지 일정 옵션을 생성합니다</div>
           </div>
           <div className="w-11 shrink-0" />
         </div>
@@ -431,7 +431,7 @@ export default function SchedulePage() {
               onClick={() => router.push(`/rooms/${roomId}/conflict`)}
               className="w-full rounded-[18px] border border-zinc-300 bg-white text-zinc-700 text-sm font-medium py-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900"
             >
-              잠깐, 갈등 지도 다시 볼래요
+              잠깐, 궁합 지도 다시 볼래요
             </button>
           </div>
         </div>

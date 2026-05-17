@@ -4,10 +4,10 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'TripSync — 갈등 없는 그룹 여행 플래너',
-  description: '서로 다른 여행 스타일을 TPTI로 분석하고, TripSync가 모두가 만족할 합의 일정을 만들어 드립니다.',
+  description: '서로 다른 여행 스타일을 여행 MBTI로 분석하고, TripSync가 모두가 만족할 합의 일정을 만들어 드립니다.',
   openGraph: {
     title: 'TripSync — 갈등 없는 그룹 여행',
-    description: 'TPTI로 여행 성향을 분석하고, 그룹 갈등을 시각화해 AI 합의 일정을 제안합니다.',
+    description: '여행 MBTI로 여행 성향을 분석하고, 그룹 궁합을 시각화해 AI 합의 일정을 제안합니다.',
     locale: 'ko_KR',
     type: 'website',
   },

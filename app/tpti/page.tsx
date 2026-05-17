@@ -85,7 +85,7 @@ export default function TptiPage() {
         throw new Error('missing_result_id');
       }
     } catch (err: unknown) {
-      setError(getApiErrorMessage(err, 'TPTI 결과를 저장하지 못했습니다. 다시 시도해주세요.'));
+      setError(getApiErrorMessage(err, '여행 MBTI 결과를 저장하지 못했습니다. 다시 시도해주세요.'));
       setStep('intro');
       return;
     }
@@ -107,7 +107,7 @@ export default function TptiPage() {
       <div className="app-shell app-page items-center justify-center">
         <div className="flex flex-col items-center gap-6 animate-pulse-soft">
           <div className="w-16 h-16 rounded-full border-4 border-zinc-200 border-t-blue-500 animate-spin" />
-          <p className="body-lg font-bold text-zinc-900">TPTI 데이터를 분석하고 있습니다…</p>
+          <p className="body-lg font-bold text-zinc-900">여행 MBTI 데이터를 분석하고 있습니다…</p>
         </div>
       </div>
     );
@@ -121,7 +121,7 @@ export default function TptiPage() {
             <iconify-icon icon="solar:arrow-left-linear" width="22"></iconify-icon>
           </button>
           <div className="min-w-0 flex-1 text-center">
-            <div className="app-topbar-title">TPTI 검사</div>
+            <div className="app-topbar-title">여행 MBTI 검사</div>
             <div className="app-topbar-meta">8개의 질문으로 나의 여행 취향을 빠르게 확인합니다</div>
           </div>
           <div className="w-11 shrink-0" />
@@ -136,7 +136,7 @@ export default function TptiPage() {
               </span>
               <h1 className="app-section-title mb-4">여행 성향을 먼저 파악하면<br />동행자와 덜 부딪힙니다</h1>
               <p className="app-section-copy mb-8">
-                TPTI는 활동성, 기록, 예산, 테마의 네 축으로 여행 취향을 분류해
+                여행 MBTI는 활동성, 기록, 예산, 테마의 네 축으로 여행 취향을 분류해
                 동행자와의 갈등 지점을 미리 예상할 수 있게 도와줍니다.
               </p>
 
@@ -163,7 +163,7 @@ export default function TptiPage() {
 
                 <span className="app-kicker mb-4">Quick Setup</span>
                 <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">30초 안에 시작할 수 있어요</h2>
-                <p className="body-md mb-8 text-zinc-700">검사를 완료하면 결과 페이지에서 나의 유형을 보고, 바로 여행방 생성까지 이어갈 수 있습니다.</p>
+                <p className="body-md mb-8 text-zinc-700">검사를 완료하면 결과 페이지에서 나의 유형을 보고, 바로 여행 계획 생성까지 이어갈 수 있습니다.</p>
 
                 {!user && (
                   <div className="mb-8">

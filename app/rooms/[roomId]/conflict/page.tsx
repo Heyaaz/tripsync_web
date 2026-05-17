@@ -207,7 +207,7 @@ export default function ConflictPage() {
           <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
         </button>
         <div className="min-w-0 flex-1 text-center">
-          <div className="app-topbar-title">그룹 갈등 지도</div>
+          <div className="app-topbar-title">그룹 궁합 지도</div>
           {roomContext && (
             <div className="app-topbar-meta">{roomContext.destination} · {formatTripDateRange(roomContext.tripStartDate, roomContext.tripEndDate, roomContext.tripDate)} · 참여 {members.length}명</div>
           )}
@@ -269,7 +269,7 @@ export default function ConflictPage() {
           )}
         </div>
 
-        {/* TPTI Radar Chart */}
+        {/* 여행 MBTI Radar Chart */}
         {isReady && conflictMap && (
           <div className="card-app p-6 md:p-7 animate-fadeInUp delay-1">
             <h2 className="text-lg font-black tracking-tight flex items-center gap-2 mb-2">
@@ -298,7 +298,7 @@ export default function ConflictPage() {
           <div className="card-app p-6 md:p-7 animate-fadeInUp delay-2 mb-10">
             <h2 className="text-lg font-black tracking-tight flex items-center gap-2 mb-4">
                <iconify-icon icon="solar:danger-triangle-bold-duotone" className="text-red-500 text-[22px]"></iconify-icon>
-               충돌 심층 분석
+               궁합 심층 분석
             </h2>
 
             {conflictMap.summaryText && (

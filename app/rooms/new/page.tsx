@@ -62,7 +62,7 @@ export default function RoomsNewPage() {
       setUser(null);
       setStep('auth');
       setAuthMode('login');
-      setError('여행방을 만들려면 방장 계정으로 로그인하거나 새 계정을 만들어주세요.');
+      setError('여행 계획을 만들려면 방장 계정으로 로그인하거나 새 계정을 만들어주세요.');
       return;
     }
     setLoading(true);
@@ -256,7 +256,7 @@ export default function RoomsNewPage() {
           <iconify-icon icon="solar:arrow-left-linear" width="22"></iconify-icon>
         </button>
         <div className="min-w-0 flex-1 text-center">
-          <div className="app-topbar-title">여행방 시작하기</div>
+          <div className="app-topbar-title">여행 계획 시작하기</div>
           <div className="app-topbar-meta">방장 인증부터 일정 생성 준비까지 한 번에 진행합니다</div>
         </div>
         <div className="w-11 shrink-0" />
@@ -274,8 +274,8 @@ export default function RoomsNewPage() {
               여행을 시작하는 첫 단계
             </h1>
             <p className="app-section-copy mb-8">
-              방장은 계정을 만들고, 여행 날짜를 정한 뒤, TPTI 결과를 바탕으로
-              동행자들과 공유할 합의형 여행방을 엽니다.
+              방장은 계정을 만들고, 여행 날짜를 정한 뒤, 여행 MBTI 결과를 바탕으로
+              동행자들과 공유할 합의형 여행 계획을 엽니다.
             </p>
 
             <div className="space-y-3">
@@ -289,12 +289,12 @@ export default function RoomsNewPage() {
                 {
                   icon: 'solar:calendar-date-bold-duotone',
                   title: '여행 날짜 먼저 고정',
-                  copy: '기본 날짜를 기준으로 갈등 지도와 일정 옵션이 생성됩니다.',
+                  copy: '기본 날짜를 기준으로 궁합 지도와 일정 옵션이 생성됩니다.',
                   tint: 'bg-emerald-50 text-emerald-600',
                 },
                 {
                   icon: 'solar:compass-bold-duotone',
-                  title: 'TPTI 결과로 조율 시작',
+                  title: '여행 MBTI 결과로 조율 시작',
                   copy: '방장도 자신의 여행 성향 결과를 가지고 있어야 더 정확한 합의가 가능합니다.',
                   tint: 'bg-violet-50 text-violet-600',
                 },
@@ -465,8 +465,8 @@ export default function RoomsNewPage() {
                       <div className="app-alert app-alert-info">
                         <iconify-icon icon="solar:refresh-bold-duotone" width="20" className="shrink-0 mt-0.5"></iconify-icon>
                         <div className="w-full">
-                          <p className="text-sm font-bold mb-1">저장된 TPTI 결과 확인 중</p>
-                          <p className="text-sm font-normal leading-relaxed">서버에 저장된 방장 TPTI 결과를 불러오고 있습니다.</p>
+                          <p className="text-sm font-bold mb-1">저장된 여행 MBTI 결과 확인 중</p>
+                          <p className="text-sm font-normal leading-relaxed">서버에 저장된 방장 여행 MBTI 결과를 불러오고 있습니다.</p>
                         </div>
                       </div>
                     )}
@@ -475,14 +475,14 @@ export default function RoomsNewPage() {
                       <div className="app-alert app-alert-warning">
                         <iconify-icon icon="solar:info-circle-bold-duotone" width="20" className="shrink-0 mt-0.5"></iconify-icon>
                         <div className="w-full">
-                          <p className="text-sm font-bold mb-1">TPTI 검사가 필요합니다</p>
-                          <p className="text-sm font-normal leading-relaxed mb-3">방장도 TPTI 결과를 가지고 있어야 갈등 조율 일정을 더 정확하게 만들 수 있습니다.</p>
+                          <p className="text-sm font-bold mb-1">여행 MBTI 검사가 필요합니다</p>
+                          <p className="text-sm font-normal leading-relaxed mb-3">방장도 여행 MBTI 결과를 가지고 있어야 갈등 조율 일정을 더 정확하게 만들 수 있습니다.</p>
                           <button
                             type="button"
                             onClick={() => router.push('/tpti')}
                             className="btn-primary w-full !bg-orange-500 hover:!bg-orange-600 !text-white !shadow-none"
                           >
-                            내 TPTI 검사하기
+                            내 여행 MBTI 검사하기
                           </button>
                         </div>
                       </div>
@@ -496,7 +496,7 @@ export default function RoomsNewPage() {
                     )}
 
                     <button className="btn-primary" type="submit" disabled={loading || !tripStartDate || !tripEndDate}>
-                      {loading ? '방 생성 중…' : '여행방 만들기'}
+                      {loading ? '방 생성 중…' : '여행 계획 만들기'}
                       <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
                     </button>
                   </form>

@@ -132,7 +132,7 @@ export default function TptiResultPage() {
   const shareUrl = typeof window !== 'undefined' && tptiResult.resultId > 0
     ? `${window.location.origin}/share/tpti/${tptiResult.resultId}`
     : '';
-  const shareTitle = `${tptiResult.nickname ?? '나'}의 TPTI 결과 · ${characterName}`;
+  const shareTitle = `${tptiResult.nickname ?? '나'}의 여행 MBTI 결과 · ${characterName}`;
   const shareText = `${characterEmoji} ${characterName}\n${summaryLine}\nTripSync에서 동행자와 여행 성향을 비교해보세요.`;
 
   function updateShareFeedback(message: string) {
@@ -217,7 +217,7 @@ export default function TptiResultPage() {
           <iconify-icon icon="solar:arrow-left-linear" width="22"></iconify-icon>
         </button>
         <div className="min-w-0 flex-1 text-center">
-          <div className="app-topbar-title">TPTI 결과</div>
+          <div className="app-topbar-title">여행 MBTI 결과</div>
           <div className="app-topbar-meta">나의 여행 취향 요약과 다음 액션을 확인합니다</div>
         </div>
         <div className="w-11 shrink-0" />
@@ -236,7 +236,7 @@ export default function TptiResultPage() {
 
               <div className="relative z-10">
                 <div className="mb-5 flex flex-wrap items-center gap-2">
-                  <span className="app-kicker">나의 TPTI 결과</span>
+                  <span className="app-kicker">나의 여행 MBTI 결과</span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/90 px-3 py-1.5 text-[13px] font-semibold text-zinc-600">
                     <iconify-icon icon="solar:users-group-rounded-bold-duotone" width="16"></iconify-icon>
                     동행자와 비교할 여행 프로필
@@ -475,7 +475,7 @@ export default function TptiResultPage() {
                 className="btn-primary py-4 text-base"
                 onClick={() => router.push(`/rooms/${currentRoom.roomId}/conflict`)}
               >
-                그룹 갈등 지도 보기 <iconify-icon icon="solar:arrow-right-linear" width="20"></iconify-icon>
+                그룹 궁합 지도 보기 <iconify-icon icon="solar:arrow-right-linear" width="20"></iconify-icon>
               </button>
             ) : (
               <>
@@ -484,7 +484,7 @@ export default function TptiResultPage() {
                   onClick={() => router.push('/rooms/new')}
                 >
                   <iconify-icon icon="solar:routing-3-bold-duotone" width="22"></iconify-icon>
-                  동행자 초대하고 갈등 지도 만들기
+                  동행자 초대하고 궁합 지도 만들기
                 </button>
               </>
             )}

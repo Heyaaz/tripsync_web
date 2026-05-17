@@ -179,16 +179,16 @@ export default async function ShareSchedulePage({ params }: Props) {
           </section>
 
           <section className="card-app p-6 md:p-7 text-center">
-            <h2 className="text-lg font-black tracking-tight text-zinc-900 mb-2">TripSync에서 여행방을 만들어 보세요</h2>
+            <h2 className="text-lg font-black tracking-tight text-zinc-900 mb-2">TripSync에서 여행 계획을 만들어 보세요</h2>
             <p className="text-sm font-normal text-zinc-700 leading-relaxed mb-6">
-              TPTI 검사부터 갈등 지도, AI 합의 일정 제안까지 같은 흐름으로 바로 시작할 수 있습니다.
+              여행 MBTI 검사부터 궁합 지도, AI 합의 일정 제안까지 같은 흐름으로 바로 시작할 수 있습니다.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/" className="btn-primary inline-flex w-auto px-6">
                 TripSync 홈으로 가기
               </Link>
               <Link href="/rooms/new" className="btn-secondary inline-flex w-auto px-6">
-                여행방 만들기
+                여행 계획 만들기
               </Link>
             </div>
           </section>

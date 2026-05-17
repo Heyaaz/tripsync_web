@@ -42,7 +42,7 @@ function roomEntryHref(room: Room) {
 
 function roomEntryLabel(room: Room) {
   if (room.status === 'completed') return '확정 일정으로 이동';
-  if (room.status === 'ready') return '갈등 지도에서 일정 만들기';
+  if (room.status === 'ready') return '궁합 지도에서 일정 만들기';
   return '방으로 다시 이동';
 }
 
@@ -154,11 +154,11 @@ function MyRoomsPanel() {
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
             <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
-            내 여행방
+            내 여행 계획
           </div>
           <h2 className="text-2xl font-black tracking-tight text-zinc-900">만든 방으로 다시 이동</h2>
           <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
-            홈으로 돌아와도 참여 중인 여행방을 바로 이어서 확인할 수 있습니다.
+            홈으로 돌아와도 참여 중인 여행 계획을 바로 이어서 확인할 수 있습니다.
           </p>
         </div>
         <Link href="/rooms/new" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(15,23,42,0.18)]">
@@ -181,7 +181,7 @@ function MyRoomsPanel() {
               </span>
               <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
             </div>
-            <h3 className="truncate text-lg font-black text-zinc-900">{room.destination} 여행방</h3>
+            <h3 className="truncate text-lg font-black text-zinc-900">{room.destination} 여행 계획</h3>
             <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
                 {formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}
             </p>
@@ -279,7 +279,7 @@ export default function LandingPage() {
             </div>
             <div className="w-px h-4 bg-zinc-200" />
             <Link href="/tpti" className="text-[13px] font-medium text-zinc-700 hover:text-zinc-900 transition-colors duration-200">
-              TPTI 검사
+              여행 MBTI 검사
             </Link>
             <Link
               href="/rooms/new"
@@ -299,11 +299,11 @@ export default function LandingPage() {
 
             <h1 className="reveal d1 text-[52px] md:text-[68px] lg:text-[80px] font-black tracking-tight leading-[1.04] text-zinc-900 mb-7 break-keep-all">
               그룹과의 여행,<br />
-              <span className="gradient-text">취향 충돌</span> 없이.
+              <span className="gradient-text">취향 조화</span>롭게.
             </h1>
 
             <p className="reveal d2 text-[17px] md:text-lg text-zinc-700 font-medium max-w-lg mx-auto leading-relaxed mb-10 break-keep-all">
-              서로 다른 여행 스타일을 TPTI로 분석하고,<br />
+              서로 다른 여행 스타일을 여행 MBTI로 분석하고,<br />
               TripSync가 모두가 만족할 합의 일정을 만들어 드립니다.
             </p>
 
@@ -312,7 +312,7 @@ export default function LandingPage() {
                 href="/rooms/new"
                 className="spring px-8 py-4 rounded-2xl bg-zinc-900 text-white font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(0,0,0,0.2)]"
               >
-                여행방 만들기
+                여행 계획 만들기
               <iconify-icon icon="solar:round-alt-arrow-right-linear" width="17"></iconify-icon>
               </Link>
               <Link
@@ -326,8 +326,8 @@ export default function LandingPage() {
             {/* Feature Pillars - meaningful, not fake stats */}
             <div className="reveal d4 w-full bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-[0_12px_32px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-zinc-100">
               {[
-                { icon: 'solar:compass-bold-duotone', color: '#2563EB', bg: 'bg-blue-50', label: 'TPTI 4개 축 분석', desc: '활동성·기록·예산·테마' },
-                { icon: 'solar:danger-triangle-bold-duotone', color: '#EA580C', bg: 'bg-orange-50', label: '그룹 갈등 시각화', desc: '충돌 지점 미리 파악' },
+                { icon: 'solar:compass-bold-duotone', color: '#2563EB', bg: 'bg-blue-50', label: '여행 MBTI 4개 축 분석', desc: '활동성·기록·예산·테마' },
+                { icon: 'solar:danger-triangle-bold-duotone', color: '#EA580C', bg: 'bg-orange-50', label: '그룹 궁합 시각화', desc: '취향 차이 한눈에 확인' },
                 { icon: 'solar:magic-stick-3-bold-duotone', color: '#7C3AED', bg: 'bg-violet-50', label: 'AI 합의 일정 3종', desc: '모두 만족하는 선택지' },
               ].map((item) => (
                 <div key={item.label} className="flex-1 flex items-center gap-3 py-5 px-6">
@@ -362,7 +362,7 @@ export default function LandingPage() {
                   color: '#2563EB',
                   bg: 'bg-blue-50',
                   border: 'border-blue-100',
-                  title: 'TPTI 검사',
+                  title: '여행 MBTI 검사',
                   desc: '8개 질문으로 나의 여행 성향을 분석합니다. 활동성·기록·예산·테마 4개 축으로 정확하게 측정해요.',
                   href: '/tpti',
                   cta: '검사 시작',
@@ -374,8 +374,8 @@ export default function LandingPage() {
                   color: '#EA580C',
                   bg: 'bg-orange-50',
                   border: 'border-orange-100',
-                  title: '갈등 지도 확인',
-                  desc: '동행자들의 성향을 비교해 충돌 예상 지점을 미리 파악합니다. 싸우기 전에 알 수 있어요.',
+                  title: '궁합 확인',
+                  desc: '동행자들의 성향을 비교해 서로의 취향 차이를 한눈에 확인합니다. 함께 맞춰가기 쉬워져요.',
                   href: '/rooms/new',
                   cta: '방 만들기',
                   ctaColor: 'text-orange-600',
@@ -428,7 +428,7 @@ export default function LandingPage() {
                   아무도 소외되지 않는<br />여행 일정을 만듭니다.
                 </h3>
               <p className="text-zinc-800 text-[16px] leading-relaxed break-keep-all max-w-md font-normal tracking-normal mb-8">
-                  전국 명소 데이터를 기반으로 그룹 구성원의 취향 갈등을 분석해, AI가 3가지 맞춤 여행 코스를 제안합니다.
+                  전국 명소 데이터를 기반으로 그룹 구성원의 취향 궁합을 분석해, AI가 3가지 맞춤 여행 코스를 제안합니다.
                 </p>
                 <Link
                   href="/rooms/new"
@@ -442,8 +442,8 @@ export default function LandingPage() {
               {/* Feature list panel */}
               <div className="relative z-10 w-full lg:w-[280px] flex-shrink-0 space-y-3">
                 {[
-                  { icon: 'solar:sort-by-time-bold-duotone', label: '취향 슬롯 배분', desc: '충돌 축 기반 슬롯 우선순위 배분', color: '#10B981', bg: '#f0fdf4', border: '#d1fae5' },
-                  { icon: 'solar:users-group-rounded-bold-duotone', label: '최저 만족도 최대화', desc: '가장 불만족한 멤버 기준 최적화', color: '#2563EB', bg: '#eff6ff', border: '#dbeafe' },
+                  { icon: 'solar:sort-by-time-bold-duotone', label: '취향 슬롯 배분', desc: '취향 차이 기반 슬롯 우선순위 배분', color: '#10B981', bg: '#f0fdf4', border: '#d1fae5' },
+                  { icon: 'solar:users-group-rounded-bold-duotone', label: '최저 만족도 최대화', desc: '모두의 만족도 기준 최적화', color: '#2563EB', bg: '#eff6ff', border: '#dbeafe' },
                   { icon: 'solar:diploma-bold-duotone', label: '3종 옵션 생성', desc: '균형형 · 개성형 · 지역 발굴형', color: '#7C3AED', bg: '#f5f3ff', border: '#ede9fe' },
                 ].map((f) => (
                   <div key={f.label} className="flex items-start gap-3 rounded-xl p-4 border" style={{ backgroundColor: f.bg, borderColor: f.border }}>
@@ -468,24 +468,24 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(255,255,255,0.07),transparent_55%)] pointer-events-none" />
             <div className="relative z-10 flex flex-col items-center">
               <h2 className="text-xl md:text-2xl font-black text-white tracking-tight mb-3 break-keep-all">
-                여행 계획, 더 이상 혼자 짊어지지 마세요.
+                여행 계획, 함께 완성해 보세요.
               </h2>
             <p className="text-blue-50/92 text-[15px] font-medium mb-7 break-keep-all">
-                여행방을 만들고 링크를 공유하면 끝 — 나머지는 TripSync와 함께 하세요.
+                여행 계획을 만들고 링크를 공유하면 끝 — 나머지는 TripSync와 함께 하세요.
             </p>
             <div className="flex flex-col sm:flex-row gap-2.5">
                 <Link
                   href="/rooms/new"
                   className="spring inline-flex px-6 py-3 items-center justify-center bg-white text-blue-700 rounded-xl font-bold text-sm shadow-[0_4px_20px_rgba(0,0,0,0.2)] gap-1.5"
                 >
-                  여행방 만들기
+                  여행 계획 만들기
                 <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
                 </Link>
                 <Link
                   href="/tpti"
                   className="spring inline-flex px-6 py-3 items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm border border-white/20 transition-colors duration-200"
                 >
-                  TPTI 먼저 해보기
+                  여행 MBTI 먼저 해보기
                 </Link>
               </div>
             </div>

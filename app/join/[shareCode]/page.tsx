@@ -205,8 +205,8 @@ export default function JoinPage() {
               </span>
               <h1 className="app-section-title mb-4">초대 링크로 들어오면<br />검사 후 바로 합류할 수 있어요</h1>
               <p className="app-section-copy mb-8">
-                TripSync는 동행자가 별도 가입 없이도 닉네임과 TPTI 검사만으로
-                여행방에 자연스럽게 참여할 수 있도록 설계되어 있습니다.
+                TripSync는 동행자가 별도 가입 없이도 닉네임과 여행 MBTI 검사만으로
+                여행 계획에 자연스럽게 참여할 수 있도록 설계되어 있습니다.
               </p>
 
               {roomInfo && (
@@ -240,7 +240,7 @@ export default function JoinPage() {
                     <iconify-icon icon="solar:letter-opened-bold-duotone" width="32" className="text-emerald-500"></iconify-icon>
                   </div>
                   <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">여행 초대 도착!</h2>
-                  <p className="text-sm font-normal text-zinc-700">가입 없이 닉네임을 정하고 TPTI 검사만 마치면 바로 방에 합류합니다.</p>
+                  <p className="text-sm font-normal text-zinc-700">가입 없이 닉네임을 정하고 여행 MBTI 검사만 마치면 바로 방에 합류합니다.</p>
                 </div>
 
                 <div className="mb-8">
@@ -253,8 +253,8 @@ export default function JoinPage() {
                       <p className="text-sm font-medium text-zinc-900">{user.nickname}님으로 합류 상태를 다시 확인할 수 있어요.</p>
                       <p className="mt-2 text-sm font-normal text-zinc-700 leading-relaxed">
                         {tptiResult?.resultId
-                          ? '저장된 TPTI 결과를 사용해 방 참여를 다시 시도합니다.'
-                          : '저장된 TPTI 결과가 없어 검사를 다시 진행해야 합니다.'}
+                          ? '저장된 여행 MBTI 결과를 사용해 방 참여를 다시 시도합니다.'
+                          : '저장된 여행 MBTI 결과가 없어 검사를 다시 진행해야 합니다.'}
                       </p>
                     </div>
                   ) : (
@@ -285,11 +285,11 @@ export default function JoinPage() {
                       setStep('tpti');
                     }}
                   >
-                    {tptiResult?.resultId ? '저장된 결과로 다시 합류하기' : 'TPTI 검사 다시 진행하기'} <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                    {tptiResult?.resultId ? '저장된 결과로 다시 합류하기' : '여행 MBTI 검사 다시 진행하기'} <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
                   </button>
                 ) : (
                   <button className="btn-primary w-full" onClick={handleNicknameSubmit}>
-                    TPTI 검사하고 방 합류하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                    여행 MBTI 검사하고 방 합류하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
                   </button>
                 )}
               </div>
@@ -310,7 +310,7 @@ export default function JoinPage() {
             <iconify-icon icon="solar:arrow-left-linear" width="22" className="text-zinc-700"></iconify-icon>
           </button>
           <div className="min-w-0 flex-1 text-center">
-            <div className="app-topbar-title">합류 전 TPTI 검사</div>
+            <div className="app-topbar-title">합류 전 여행 MBTI 검사</div>
             <div className="app-topbar-meta">{currentQ + 1} / {TPTI_QUESTIONS.length} 질문</div>
           </div>
           <div className="app-chip bg-zinc-100 text-zinc-700 border border-zinc-200">
@@ -403,7 +403,7 @@ export default function JoinPage() {
                </div>
                <span className="app-kicker mb-4 bg-emerald-50 text-emerald-600 border-emerald-100">Welcome Aboard</span>
                <h1 className="text-3xl font-black tracking-tight mb-3 text-zinc-900">여행 방 합류 완료!</h1>
-               <p className="text-sm font-normal text-zinc-700 max-w-sm leading-relaxed">검사 결과를 기반으로 이제 갈등 지도와 일정 제안을 함께 확인할 수 있습니다.</p>
+               <p className="text-sm font-normal text-zinc-700 max-w-sm leading-relaxed">검사 결과를 기반으로 이제 궁합 지도와 일정 제안을 함께 확인할 수 있습니다.</p>
                
                {tptiResult && (
                  <div className="bg-zinc-50 border border-zinc-200 rounded-[20px] w-full p-4 mb-6 mt-6">
@@ -417,7 +417,7 @@ export default function JoinPage() {
                  className="btn-primary w-full shadow-[0_0_30px_rgba(16,185,129,0.2)] bg-emerald-600 hover:bg-emerald-500"
                  onClick={() => router.push(`/rooms/${roomInfo?.roomId}/conflict`)}
                >
-                 그룹 갈등 지도 확인하러 가기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                 그룹 궁합 지도 확인하러 가기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
                </button>
             </div>
           </div>

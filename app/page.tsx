@@ -10,6 +10,7 @@ import { normalizeRoomSummary } from '@/lib/utils/room';
 
 type RoomPayload = {
   roomId: number;
+  roomName?: string;
   destination: string;
   tripDate: string;
   tripStartDate?: string;
@@ -26,6 +27,7 @@ function isRoomPayload(value: unknown): value is RoomPayload {
   const room = value as Partial<RoomPayload>;
   return (
     typeof room.roomId === 'number' &&
+    (room.roomName === undefined || typeof room.roomName === 'string') &&
     typeof room.destination === 'string' &&
     typeof room.tripDate === 'string' &&
     typeof room.shareCode === 'string' &&
@@ -187,7 +189,7 @@ function MyRoomsPanel() {
               </span>
               <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
             </div>
-            <h3 className="truncate text-lg font-black text-zinc-900">{room.destination} 여행 계획</h3>
+            <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
             <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
                 {formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}
             </p>

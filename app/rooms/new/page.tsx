@@ -27,6 +27,7 @@ export default function RoomsNewPage() {
   const [nickname, setNickname] = useState('');
 
   // Room form
+  const [roomName, setRoomName] = useState('');
   const [tripStartDate, setTripStartDate] = useState('');
   const [tripEndDate, setTripEndDate] = useState('');
   const [destination] = useState('충남');
@@ -56,6 +57,8 @@ export default function RoomsNewPage() {
 
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault();
+    if (!roomName.trim()) { setError('방 이름을 입력해주세요'); return; }
+    if (roomName.trim().length > 100) { setError('방 이름은 100자 이하여야 합니다'); return; }
     if (!tripStartDate || !tripEndDate) { setError('여행 기간을 선택해주세요'); return; }
     if (!isValidDateRange(tripStartDate, tripEndDate)) { setError('종료일은 시작일보다 빠를 수 없습니다'); return; }
     if (!user || user.isGuest) {
@@ -69,11 +72,13 @@ export default function RoomsNewPage() {
     setError('');
     const tripDateLabel = formatTripDateRange(tripStartDate, tripEndDate);
     try {
-      const res = await roomApi.create({ destination, tripDate: tripStartDate, tripStartDate, tripEndDate });
+      const normalizedRoomName = roomName.trim();
+      const res = await roomApi.create({ destination, tripDate: tripStartDate, tripStartDate, tripEndDate, roomName: normalizedRoomName });
       const roomData = res.data?.data;
       if (roomData) {
         setCurrentRoom({
           roomId: roomData.roomId,
+          roomName: roomData.roomName ?? normalizedRoomName,
           destination,
           tripDate: tripDateLabel,
           tripStartDate,
@@ -428,6 +433,19 @@ export default function RoomsNewPage() {
 
                   <form onSubmit={handleCreateRoom} className="flex flex-col gap-6">
                     <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-2">방 이름</label>
+                      <input
+                        className="input-field"
+                        placeholder="예: 여름 충남 힐링 여행"
+                        value={roomName}
+                        onChange={(e) => setRoomName(e.target.value)}
+                        maxLength={100}
+                        required
+                      />
+                      <p className="text-sm font-normal text-zinc-700 mt-3">홈과 초대 화면에서 동행자에게 보여질 여행 방 이름입니다.</p>
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-zinc-700 mb-2">여행 지역</label>
                       <div className="input-field flex items-center justify-between bg-zinc-50/80 opacity-90 cursor-not-allowed">
                         <div className="flex items-center gap-2">
@@ -495,7 +513,7 @@ export default function RoomsNewPage() {
                       </div>
                     )}
 
-                    <button className="btn-primary" type="submit" disabled={loading || !tripStartDate || !tripEndDate}>
+                    <button className="btn-primary" type="submit" disabled={loading || !roomName.trim() || !tripStartDate || !tripEndDate}>
                       {loading ? '방 생성 중…' : '여행 계획 만들기'}
                       <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
                     </button>

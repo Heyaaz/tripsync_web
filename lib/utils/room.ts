@@ -4,7 +4,7 @@ import { parseTripDateRange } from './date';
 type RoomSummaryInput = Pick<
   Room,
   'roomId' | 'destination' | 'tripDate' | 'shareCode' | 'status' | 'hostUserId' | 'memberCount' | 'createdAt'
-> & Partial<Pick<Room, 'tripStartDate' | 'tripEndDate'>>;
+> & Partial<Pick<Room, 'roomName' | 'tripStartDate' | 'tripEndDate'>>;
 
 export function normalizeRoomSummary(input: RoomSummaryInput): Room {
   const parsedRange = parseTripDateRange(input.tripDate);

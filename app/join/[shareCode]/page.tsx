@@ -13,7 +13,7 @@ import type { Room, TptiResult } from '@/lib/types';
 type Step = 'loading' | 'intro' | 'tpti' | 'submitting' | 'done';
 type JoinRoomInfo = Pick<
   Room,
-  'roomId' | 'destination' | 'tripDate' | 'tripStartDate' | 'tripEndDate' | 'memberCount'
+  'roomId' | 'roomName' | 'destination' | 'tripDate' | 'tripStartDate' | 'tripEndDate' | 'memberCount'
 > & {
   hostNickname: string;
 };
@@ -74,6 +74,7 @@ export default function JoinPage() {
       if (data) {
         const normalizedRoom = normalizeRoomSummary({
           roomId: data.roomId,
+          roomName: data.roomName,
           destination: data.destination,
           tripDate: data.tripDate,
           tripStartDate: data.tripStartDate,
@@ -225,7 +226,7 @@ export default function JoinPage() {
                       <iconify-icon icon="solar:calendar-date-bold-duotone" width="20"></iconify-icon>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-zinc-900 mb-1">{roomInfo.destination}</div>
+                      <div className="text-sm font-semibold text-zinc-900 mb-1">{roomInfo.roomName ?? roomInfo.destination}</div>
                       <div className="text-sm font-normal text-zinc-700">{formatTripDateRange(roomInfo.tripStartDate, roomInfo.tripEndDate, roomInfo.tripDate)} · 현재 {roomInfo.memberCount}명 참여 중</div>
                     </div>
                   </div>

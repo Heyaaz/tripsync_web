@@ -43,6 +43,7 @@ export type RoomStatus = 'waiting' | 'ready' | 'completed';
 
 export interface Room {
   roomId: number;
+  roomName?: string;
   destination: string;
   tripDate: string;
   tripStartDate?: string;

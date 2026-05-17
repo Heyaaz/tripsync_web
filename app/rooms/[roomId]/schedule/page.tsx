@@ -467,8 +467,8 @@ export default function SchedulePage() {
           <div className="card-glass p-6 mb-8 max-w-sm mx-auto w-full">
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
-                <span className="text-sm font-medium text-zinc-700">여행지</span>
-                <span className="text-sm font-bold text-zinc-900">{roomContext?.destination ?? '여행지 확인 중'}</span>
+                <span className="text-sm font-medium text-zinc-700">방 이름</span>
+                <span className="text-sm font-bold text-zinc-900">{roomContext?.roomName ?? roomContext?.destination ?? '여행지 확인 중'}</span>
               </div>
               <div className="flex justify-between items-center bg-zinc-50 p-3 rounded-lg border border-zinc-200">
                 <span className="text-sm font-medium text-zinc-700">일자</span>

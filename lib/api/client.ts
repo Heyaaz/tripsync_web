@@ -47,7 +47,7 @@ export const tptiApi = {
 
 // ─── Room API ─────────────────────────────────────────────
 export const roomApi = {
-  create: (data: { destination: string; tripDate: string; tripStartDate?: string; tripEndDate?: string }) =>
+  create: (data: { destination: string; tripDate: string; tripStartDate?: string; tripEndDate?: string; roomName?: string }) =>
     apiClient.post('/rooms', data),
 
   getById: (id: number) => apiClient.get(`/rooms/${id}`),

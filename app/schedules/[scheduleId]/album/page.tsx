@@ -15,6 +15,7 @@ function formatBytes(bytes: number) {
   return `${bytes}B`;
 }
 
+
 function getPhotoSrc(scheduleId: number, photo: TripPhoto) {
   return photo.imageUrl || photo.contentUrl || scheduleApi.getPhotoContentUrl(scheduleId, photo.photoId);
 }
@@ -271,24 +272,23 @@ export default function ScheduleAlbumPage() {
             {album?.slots.map((slot) => (
               <article key={slot.scheduleSlotId} className="card-app overflow-hidden p-5 md:p-6">
                 <div className="mb-5 flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12px] font-semibold text-zinc-700">
+                      <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12px] font-semibold text-zinc-700">
                         {slot.orderIndex}번째 코스
                       </span>
                       {slot.place.isDepopulationArea ? (
-                        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[12px] font-semibold text-emerald-700">로컬 픽</span>
-                      ) : null}
-                      {slot.startTime && slot.endTime ? (
-                        <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[12px] font-semibold text-blue-700">
-                          {slot.startTime} - {slot.endTime}
-                        </span>
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[12px] font-semibold text-emerald-700">로컬 픽</span>
                       ) : null}
                     </div>
-                    <h2 className="text-xl font-black tracking-tight text-zinc-900">{slot.place.name}</h2>
-                    <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">{slot.place.address}</p>
+                    <h2 className="break-keep text-xl font-black tracking-tight text-zinc-900">{slot.place.name}</h2>
+                    <p className="mt-1 break-keep text-sm font-normal leading-relaxed text-zinc-700">{slot.place.address}</p>
                   </div>
-                  <button type="button" onClick={() => openUploadSheet(slot)} className="btn-primary w-full shrink-0 px-5 py-3 text-sm sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => openUploadSheet(slot)}
+                    className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-[18px] bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[0_0_0_1px_rgba(59,130,246,0.25)_inset] transition hover:bg-blue-700 sm:w-auto"
+                  >
                     <iconify-icon icon="solar:camera-add-bold-duotone" width="18"></iconify-icon>
                     사진 올리기
                   </button>

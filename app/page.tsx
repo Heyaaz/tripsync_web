@@ -197,7 +197,10 @@ function MyRoomsPanel() {
                 다녀온 여행의 사진과 장소별 순간을 홈에서 바로 다시 꺼내볼 수 있습니다.
               </p>
             </div>
-            <Link href="/mypage" className="text-sm font-bold text-emerald-700">마이페이지에서 모두 보기</Link>
+            <Link href="/mypage" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+              전체보기
+              <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
+            </Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">

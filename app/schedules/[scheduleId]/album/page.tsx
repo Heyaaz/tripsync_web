@@ -2,9 +2,10 @@
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import ScheduleMapModalView from '@/components/schedule/ScheduleMapModalView';
 import { scheduleApi } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/utils/error';
-import type { TripPhoto, TripPhotoAlbum, TripPhotoAlbumSlot } from '@/lib/types';
+import type { ScheduleSlot, TripPhoto, TripPhotoAlbum, TripPhotoAlbumSlot } from '@/lib/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -44,6 +45,30 @@ function triggerPhotoDownload(scheduleId: number, photo: TripPhoto, placeName: s
   link.remove();
 }
 
+function cleanDisplayText(text?: string | null) {
+  return (text ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && line !== '.')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[.。]+$/g, '')
+    .trim();
+}
+
+function albumSlotToScheduleSlot(slot: TripPhotoAlbumSlot): ScheduleSlot {
+  return {
+    slotId: slot.scheduleSlotId,
+    orderIndex: slot.orderIndex,
+    startTime: slot.startTime ?? '',
+    endTime: slot.endTime ?? '',
+    slotType: 'common',
+    reasonAxis: 'common',
+    reason: slot.place.description,
+    place: slot.place,
+  };
+}
+
 type UploadSheetState = {
   slot: TripPhotoAlbumSlot;
   caption: string;
@@ -66,6 +91,7 @@ export default function ScheduleAlbumPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<UploadSheetState | null>(null);
+  const [detailSlot, setDetailSlot] = useState<TripPhotoAlbumSlot | null>(null);
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
   const [uploading, setUploading] = useState(false);
   const [downloadingSlotId, setDownloadingSlotId] = useState<number | null>(null);
@@ -73,7 +99,7 @@ export default function ScheduleAlbumPage() {
 
   const totalPhotoCount = album?.totalPhotoCount ?? album?.slots.reduce((sum, slot) => sum + slot.photos.length, 0) ?? 0;
   const localPickCount = album?.slots.filter((slot) => slot.place.isDepopulationArea).length ?? 0;
-  const isOverlayOpen = sheet !== null || lightbox !== null;
+  const isOverlayOpen = sheet !== null || detailSlot !== null || lightbox !== null;
   const previewUrl = sheet?.previewUrl ?? null;
 
   const representativePhotos = useMemo(() => {
@@ -320,18 +346,25 @@ export default function ScheduleAlbumPage() {
             {album?.slots.map((slot) => (
               <article key={slot.scheduleSlotId} className="card-app overflow-hidden p-5 md:p-6">
                 <div className="mb-5 flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12px] font-semibold text-zinc-700">
-                        {slot.orderIndex}번째 코스
-                      </span>
-                      {slot.place.isDepopulationArea ? (
-                        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[12px] font-semibold text-emerald-700">로컬 픽</span>
-                      ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setDetailSlot(slot)}
+                    className="group min-w-0 flex-1 rounded-[20px] text-left focus:outline-none focus:ring-4 focus:ring-zinc-100"
+                    aria-label={`${slot.place.name} 코스 상세 보기`}
+                  >
+                    <div className="p-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12px] font-semibold text-zinc-700">
+                          {slot.orderIndex}번째 코스
+                        </span>
+                        {slot.place.isDepopulationArea ? (
+                          <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[12px] font-semibold text-emerald-700">로컬 픽</span>
+                        ) : null}
+                      </div>
+                      <h2 className="break-keep text-xl font-black tracking-tight text-zinc-900">{slot.place.name}</h2>
+                      <p className="mt-1 break-keep text-sm font-normal leading-relaxed text-zinc-700">{slot.place.address}</p>
                     </div>
-                    <h2 className="break-keep text-xl font-black tracking-tight text-zinc-900">{slot.place.name}</h2>
-                    <p className="mt-1 break-keep text-sm font-normal leading-relaxed text-zinc-700">{slot.place.address}</p>
-                  </div>
+                  </button>
                   <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
                     {slot.photos.length > 0 ? (
                       <button
@@ -462,6 +495,108 @@ export default function ScheduleAlbumPage() {
           </form>
         </div>
       ) : null}
+
+      {detailSlot ? (() => {
+        const mapSlot = albumSlotToScheduleSlot(detailSlot);
+        const description = cleanDisplayText(detailSlot.place.description);
+        const scheduleTitle = '확정 일정';
+        const scheduleSummary = detailSlot.place.address;
+
+        return (
+          <div className="fixed inset-0 z-[105] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
+            <div className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" onClick={() => setDetailSlot(null)} />
+            <section className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl animate-fadeInUp">
+              <button
+                type="button"
+                onClick={() => setDetailSlot(null)}
+                className="absolute right-4 top-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 text-2xl font-light leading-none text-zinc-600 transition-colors hover:bg-zinc-300 hover:text-zinc-900"
+                aria-label="장소 상세 닫기"
+              >
+                ✕
+              </button>
+
+              <div className="min-h-0 flex-1 overflow-y-auto p-6 pt-10 pb-4">
+                <div className="mb-6 flex flex-wrap items-center gap-2 pr-14">
+                  {detailSlot.place.isDepopulationArea ? (
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700">
+                      로컬 픽
+                    </span>
+                  ) : null}
+                  <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
+                    {detailSlot.orderIndex}번째 코스
+                  </span>
+                </div>
+
+                <h3 className="mb-2 break-keep text-3xl font-black tracking-tight text-zinc-900">{detailSlot.place.name}</h3>
+                <p className="mb-7 break-keep text-base font-normal leading-relaxed text-zinc-700">{detailSlot.place.address}</p>
+
+                {description ? (
+                  <div className="mb-8 rounded-[24px] border border-zinc-100 bg-zinc-50 p-5">
+                    <p className="flex items-start gap-3 break-keep text-base font-normal leading-relaxed text-zinc-700">
+                      <iconify-icon icon="solar:info-circle-bold-duotone" className="mt-0.5 shrink-0 text-xl text-blue-500"></iconify-icon>
+                      {description}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="mb-8 overflow-hidden rounded-[24px] border border-zinc-200 bg-white">
+                  <div className="h-[300px] overflow-hidden border-b border-zinc-100 bg-zinc-100">
+                    <ScheduleMapModalView
+                      key={`album-detail-map:${detailSlot.scheduleSlotId}:${detailSlot.place.id}`}
+                      slots={[mapSlot]}
+                      initialOrderIndex={mapSlot.orderIndex}
+                      scheduleTitle={`${scheduleTitle} → ${detailSlot.place.name}`}
+                      scheduleSummary={scheduleSummary}
+                      showHeader={false}
+                    />
+                  </div>
+                  <div className="bg-white px-5 py-4">
+                    <a
+                      href={`https://map.kakao.com/link/search/${encodeURIComponent(detailSlot.place.name)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <iconify-icon icon="solar:map-point-wave-bold-duotone" width="18"></iconify-icon>
+                      카카오맵에서 열기
+                    </a>
+                  </div>
+                </div>
+
+                <div className="mb-8 rounded-[24px] border border-zinc-200 bg-zinc-50 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-black text-zinc-900">이 코스의 여행기</h4>
+                      <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">사진 {detailSlot.photos.length}장</p>
+                    </div>
+                    {detailSlot.photos.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadSlot(detailSlot)}
+                        disabled={downloadingSlotId !== null}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 transition hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <iconify-icon icon="solar:download-minimalistic-bold-duotone" width="16"></iconify-icon>
+                        {downloadingSlotId === detailSlot.scheduleSlotId ? '준비 중…' : '전체 다운로드'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+              </div>
+              <div className="shrink-0 border-t border-zinc-100 bg-white px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setDetailSlot(null)}
+                  className="w-full rounded-[22px] bg-zinc-900 py-4 text-base font-bold text-white shadow-[0_10px_28px_rgba(15,23,42,0.18)] transition-colors hover:bg-zinc-800"
+                >
+                  확인
+                </button>
+              </div>
+            </section>
+          </div>
+        );
+      })() : null}
 
       {lightbox ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-zinc-950/86 p-4 backdrop-blur-sm">

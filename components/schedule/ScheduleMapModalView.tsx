@@ -9,6 +9,7 @@ type Props = {
   scheduleTitle?: string;
   scheduleSummary?: string;
   onReorder?: (slots: ScheduleSlot[]) => void;
+  showHeader?: boolean;
 };
 
 type ScheduleSlotWithCoordinates = ScheduleSlot & {
@@ -234,6 +235,7 @@ export default function ScheduleMapModalView({
   scheduleTitle,
   scheduleSummary,
   onReorder,
+  showHeader = true,
 }: Props) {
   const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY;
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -394,23 +396,25 @@ export default function ScheduleMapModalView({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-zinc-50">
-      <div className="shrink-0 border-b border-zinc-100 bg-white px-5 py-4">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-            {isSingleSlotView ? '선택 코스 지도' : '일정 전체 지도'}
-          </span>
-          <span className="text-[12px] font-medium text-zinc-500">
-            총 {orderedSlots.length}개 코스
-          </span>
+      {showHeader ? (
+        <div className="shrink-0 border-b border-zinc-100 bg-white px-5 py-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+              {isSingleSlotView ? '선택 코스 지도' : '일정 전체 지도'}
+            </span>
+            <span className="text-[12px] font-medium text-zinc-500">
+              총 {orderedSlots.length}개 코스
+            </span>
+          </div>
+          {scheduleTitle ? <h4 className="text-base font-bold text-zinc-900">{scheduleTitle}</h4> : null}
+          {scheduleSummary ? <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">{scheduleSummary}</p> : null}
+          {missingCoordsCount > 0 ? (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              좌표가 없는 코스 {missingCoordsCount}개는 목록에만 표시됩니다.
+            </p>
+          ) : null}
         </div>
-        {scheduleTitle ? <h4 className="text-base font-bold text-zinc-900">{scheduleTitle}</h4> : null}
-        {scheduleSummary ? <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">{scheduleSummary}</p> : null}
-        {missingCoordsCount > 0 ? (
-          <p className="mt-2 text-xs font-medium text-amber-700">
-            좌표가 없는 코스 {missingCoordsCount}개는 목록에만 표시됩니다.
-          </p>
-        ) : null}
-      </div>
+      ) : null}
 
       <div className="relative min-h-0 flex-1 bg-zinc-100">
         {!appKey ? (

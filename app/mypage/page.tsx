@@ -287,7 +287,7 @@ export default function MyPage() {
                 <div>
                   <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
                     <iconify-icon icon="solar:gallery-wide-bold-duotone" width="15"></iconify-icon>
-                    Travel Journal
+                    나의 여행기
                   </span>
                   <h2 className="text-2xl font-black tracking-tight text-zinc-900">나의 여행기</h2>
                   <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
@@ -335,6 +335,10 @@ export default function MyPage() {
             <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
+                    <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
+                    내 여행 계획
+                  </div>
                   <h2 className="text-2xl font-black tracking-tight text-zinc-900">내 여행 계획</h2>
                   <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">내가 만들었거나 참여 중인 방을 다시 열 수 있습니다.</p>
                 </div>

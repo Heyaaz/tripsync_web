@@ -89,6 +89,9 @@ export default function MyPage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [tptiSyncing, setTptiSyncing] = useState(false);
   const [error, setError] = useState('');
+  const [isArchiveOpen, setIsArchiveOpen] = useState(true);
+  const [isPlansOpen, setIsPlansOpen] = useState(true);
+  const [collapseStateLoaded, setCollapseStateLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -225,6 +228,25 @@ export default function MyPage() {
   const needsAuth = !user || user.isGuest;
   const archivedRooms = archivedRoomsFrom(rooms);
 
+  useEffect(() => {
+    const archiveOpen = window.localStorage.getItem('mypage.archive.open');
+    const plansOpen = window.localStorage.getItem('mypage.plans.open');
+
+    if (archiveOpen !== null) setIsArchiveOpen(archiveOpen === 'true');
+    if (plansOpen !== null) setIsPlansOpen(plansOpen === 'true');
+    setCollapseStateLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!collapseStateLoaded) return;
+    window.localStorage.setItem('mypage.archive.open', String(isArchiveOpen));
+  }, [collapseStateLoaded, isArchiveOpen]);
+
+  useEffect(() => {
+    if (!collapseStateLoaded) return;
+    window.localStorage.setItem('mypage.plans.open', String(isPlansOpen));
+  }, [collapseStateLoaded, isPlansOpen]);
+
   return (
     <div className="app-shell app-page">
       <div className="app-topbar">
@@ -306,7 +328,10 @@ export default function MyPage() {
             <section className="rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_16px_42px_rgba(37,99,235,0.08)]">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <span className="app-kicker mb-3 bg-blue-50 text-blue-600 border-blue-100">Profile</span>
+                  <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700">
+                    <iconify-icon icon="solar:user-id-bold-duotone" width="15"></iconify-icon>
+                    프로필
+                  </span>
                   <div className="flex flex-wrap items-center gap-3">
                     <h1 className="text-3xl font-black tracking-tight text-zinc-900">{user.nickname}님</h1>
                     {tptiResult?.resultId && tptiResult.userId === user.id ? (
@@ -324,24 +349,24 @@ export default function MyPage() {
                       </span>
                     )}
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Link
-                      href={tptiResult?.resultId && tptiResult.userId === user.id ? '/tpti/result' : '/tpti'}
-                      className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 sm:w-auto"
-                    >
-                      여행 MBTI 보러가기
-                      <iconify-icon icon="solar:arrow-right-linear" width="16"></iconify-icon>
-                    </Link>
-                  </div>
                 </div>
-                <button className="inline-flex w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto" type="button" onClick={handleLogout} disabled={loggingOut}>
-                  {loggingOut ? '로그아웃 중…' : '로그아웃'}
-                </button>
+                <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:justify-end">
+                  <Link
+                    href={tptiResult?.resultId && tptiResult.userId === user.id ? '/tpti/result' : '/tpti'}
+                    className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 sm:w-auto"
+                  >
+                    여행 MBTI 보러가기
+                    <iconify-icon icon="solar:arrow-right-linear" width="16"></iconify-icon>
+                  </Link>
+                  <button className="inline-flex w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto" type="button" onClick={handleLogout} disabled={loggingOut}>
+                    {loggingOut ? '로그아웃 중…' : '로그아웃'}
+                  </button>
+                </div>
               </div>
             </section>
 
             <section className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_16px_42px_rgba(16,185,129,0.08)]">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
                     <iconify-icon icon="solar:gallery-wide-bold-duotone" width="15"></iconify-icon>
@@ -352,13 +377,20 @@ export default function MyPage() {
                     다녀온 여행의 확정 일정과 장소별 사진을 한 곳에 모아 여행기로 남깁니다. 사진을 올릴수록 우리만의 기록이 완성됩니다.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
-                  <p className="text-sm font-normal text-zinc-700">기록된 여행</p>
-                  <p className="mt-1 text-2xl font-black text-emerald-700">{archivedRooms.length}</p>
+                <div className="flex w-full shrink-0 flex-wrap items-start gap-3 sm:w-auto sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsArchiveOpen((open) => !open)}
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-white text-emerald-700 shadow-[0_8px_20px_rgba(16,185,129,0.08)] transition hover:-translate-y-0.5"
+                    aria-label={isArchiveOpen ? '나의 여행기 접기' : '나의 여행기 펼치기'}
+                    aria-expanded={isArchiveOpen}
+                  >
+                    <iconify-icon icon={isArchiveOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} width="18"></iconify-icon>
+                  </button>
                 </div>
               </div>
 
-              {loading ? (
+              {isArchiveOpen ? loading ? (
                 <p className="text-sm font-normal text-zinc-700">아카이브를 불러오는 중입니다…</p>
               ) : archivedRooms.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
@@ -387,11 +419,11 @@ export default function MyPage() {
                     </Link>
                   ))}
                 </div>
-              )}
+              ) : null}
             </section>
 
             <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
                     <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
@@ -400,31 +432,44 @@ export default function MyPage() {
                   <h2 className="text-2xl font-black tracking-tight text-zinc-900">내 여행 계획</h2>
                   <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">내가 만들었거나 참여 중인 방을 다시 열 수 있습니다.</p>
                 </div>
-                <Link href="/rooms/new" className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 sm:w-auto">새 방 만들기</Link>
+                <div className="flex w-full shrink-0 flex-wrap items-start gap-3 sm:w-auto sm:justify-end">
+                  <Link href="/rooms/new" className="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-sm font-bold text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 sm:w-auto">새 방 만들기</Link>
+                  <button
+                    type="button"
+                    onClick={() => setIsPlansOpen((open) => !open)}
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-100 bg-white text-blue-700 shadow-[0_8px_20px_rgba(37,99,235,0.08)] transition hover:-translate-y-0.5"
+                    aria-label={isPlansOpen ? '내 여행 계획 접기' : '내 여행 계획 펼치기'}
+                    aria-expanded={isPlansOpen}
+                  >
+                    <iconify-icon icon={isPlansOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} width="18"></iconify-icon>
+                  </button>
+                </div>
               </div>
 
-              {error && <div className="app-alert app-alert-danger mb-4"><p className="text-sm font-medium">{error}</p></div>}
-              {loading ? (
-                <p className="text-sm font-normal text-zinc-700">여행 계획을 불러오는 중입니다…</p>
-              ) : rooms.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center">
-                  <p className="font-bold text-zinc-900">아직 참여 중인 여행 계획이 없습니다.</p>
-                  <p className="mt-2 text-sm font-normal text-zinc-700">새 방을 만들거나 초대 링크로 참여해 보세요.</p>
-                </div>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {rooms.map((room) => (
-                    <Link key={room.roomId} href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="spring rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>{roomStatusLabel(room)}</span>
-                        <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
-                      </div>
-                      <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
-                      <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              {isPlansOpen ? <>
+                {error && <div className="app-alert app-alert-danger mb-4"><p className="text-sm font-medium">{error}</p></div>}
+                {loading ? (
+                  <p className="text-sm font-normal text-zinc-700">여행 계획을 불러오는 중입니다…</p>
+                ) : rooms.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center">
+                    <p className="font-bold text-zinc-900">아직 참여 중인 여행 계획이 없습니다.</p>
+                    <p className="mt-2 text-sm font-normal text-zinc-700">새 방을 만들거나 초대 링크로 참여해 보세요.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {rooms.map((room) => (
+                      <Link key={room.roomId} href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="spring rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>{roomStatusLabel(room)}</span>
+                          <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
+                        </div>
+                        <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
+                        <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </> : null}
             </section>
           </div>
         )}

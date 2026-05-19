@@ -149,9 +149,9 @@ function HomeAuthActions() {
     <div className="flex items-center gap-2">
       <Link
         href="/mypage"
-        className="spring hidden max-w-[140px] truncate rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-[13px] font-bold text-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.08)] sm:inline-flex"
+        className="spring hidden rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-[13px] font-bold text-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.08)] sm:inline-flex"
       >
-        {user.nickname} · 마이페이지
+        마이페이지
       </Link>
       <Link
         href="/mypage"
@@ -471,7 +471,6 @@ export default function LandingPage() {
           {/* ── How It Works ── */}
           <section className="mb-32">
             <div className="reveal text-center mb-14">
-              <div className="text-sm font-medium text-zinc-600 mb-3">이렇게 작동합니다</div>
               <h2 className="text-3xl md:text-4xl font-black text-zinc-900 tracking-tight break-keep-all">
                 3단계로 완성되는<br />그룹 여행 플래너
               </h2>

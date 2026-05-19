@@ -213,7 +213,7 @@ export interface PublicShareSchedule {
 }
 
 
-// ─── 공유 사진첩 ─────────────────────────────────────────
+// ─── 여행기 ─────────────────────────────────────────
 export type TripPhotoStatus = 'active' | 'hidden' | 'deleted';
 
 export interface TripPhoto {

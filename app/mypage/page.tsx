@@ -24,6 +24,9 @@ type RoomPayload = {
   hostUserId: number;
   memberCount: number;
   createdAt: string;
+  hasGeneratedSchedule?: boolean;
+  confirmedScheduleId?: number | null;
+  latestScheduleVersion?: number | null;
 };
 
 function isRoomPayload(value: unknown): value is RoomPayload {
@@ -38,12 +41,37 @@ function isRoomPayload(value: unknown): value is RoomPayload {
     typeof room.status === 'string' &&
     typeof room.hostUserId === 'number' &&
     typeof room.memberCount === 'number' &&
-    typeof room.createdAt === 'string'
+    typeof room.createdAt === 'string' &&
+    (room.hasGeneratedSchedule === undefined || typeof room.hasGeneratedSchedule === 'boolean') &&
+    (room.confirmedScheduleId === undefined || room.confirmedScheduleId === null || typeof room.confirmedScheduleId === 'number') &&
+    (room.latestScheduleVersion === undefined || room.latestScheduleVersion === null || typeof room.latestScheduleVersion === 'number')
   );
 }
 
 function roomEntryHref(room: Room) {
   return room.status === 'completed' || room.hasGeneratedSchedule ? `/rooms/${room.roomId}/schedule` : `/rooms/${room.roomId}/conflict`;
+}
+
+function roomStatusLabel(room: Room) {
+  if (room.confirmedScheduleId || room.status === 'completed') return '확정 완료';
+  if (room.hasGeneratedSchedule) return '일정 선택 대기';
+  if (room.status === 'ready') return '일정 생성 가능';
+  return '대기 중';
+}
+
+function roomStatusClassName(room: Room) {
+  if (room.confirmedScheduleId || room.status === 'completed') return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+  if (room.hasGeneratedSchedule) return 'bg-purple-50 text-purple-700 ring-purple-100';
+  if (room.status === 'ready') return 'bg-blue-50 text-blue-700 ring-blue-100';
+  return 'bg-amber-50 text-amber-700 ring-amber-100';
+}
+
+function archivedRoomsFrom(rooms: Room[]) {
+  return rooms.filter((room) => typeof room.confirmedScheduleId === 'number');
+}
+
+function albumHref(room: Room) {
+  return `/schedules/${room.confirmedScheduleId}/album`;
 }
 
 export default function MyPage() {
@@ -161,6 +189,7 @@ export default function MyPage() {
   }
 
   const needsAuth = !user || user.isGuest;
+  const archivedRooms = archivedRoomsFrom(rooms);
 
   return (
     <div className="app-shell app-page">
@@ -247,10 +276,60 @@ export default function MyPage() {
                   <h1 className="text-3xl font-black tracking-tight text-zinc-900">{user.nickname}님</h1>
                   <p className="mt-2 text-sm font-normal text-zinc-700">{user.email ?? user.authProvider} 계정으로 로그인 중</p>
                 </div>
-                <button className="btn-secondary" type="button" onClick={handleLogout} disabled={loggingOut}>
+                <button className="inline-flex w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto" type="button" onClick={handleLogout} disabled={loggingOut}>
                   {loggingOut ? '로그아웃 중…' : '로그아웃'}
                 </button>
               </div>
+            </section>
+
+            <section className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_16px_42px_rgba(16,185,129,0.08)]">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
+                    <iconify-icon icon="solar:gallery-wide-bold-duotone" width="15"></iconify-icon>
+                    Travel Journal
+                  </span>
+                  <h2 className="text-2xl font-black tracking-tight text-zinc-900">나의 여행기</h2>
+                  <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
+                    다녀온 여행의 확정 일정과 장소별 사진을 한 곳에 모아 여행기로 남깁니다. 사진을 올릴수록 우리만의 기록이 완성됩니다.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
+                  <p className="text-sm font-normal text-zinc-700">기록된 여행</p>
+                  <p className="mt-1 text-2xl font-black text-emerald-700">{archivedRooms.length}</p>
+                </div>
+              </div>
+
+              {loading ? (
+                <p className="text-sm font-normal text-zinc-700">아카이브를 불러오는 중입니다…</p>
+              ) : archivedRooms.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
+                    <iconify-icon icon="solar:album-bold-duotone" width="24"></iconify-icon>
+                  </div>
+                  <p className="font-bold text-zinc-900">아직 남겨진 여행기가 없습니다.</p>
+                  <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">일정을 확정한 뒤 장소별 사진을 올리면 이곳에 여행기가 쌓입니다.</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {archivedRooms.map((room) => (
+                    <Link key={room.roomId} href={albumHref(room)} className="spring group overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
+                          <iconify-icon icon="solar:album-bold-duotone" width="23"></iconify-icon>
+                        </div>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">여행기</span>
+                      </div>
+                      <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
+                      <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
+                      <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-emerald-700">
+                        추억 여행기 열기
+                        <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
@@ -259,7 +338,7 @@ export default function MyPage() {
                   <h2 className="text-2xl font-black tracking-tight text-zinc-900">내 여행 계획</h2>
                   <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">내가 만들었거나 참여 중인 방을 다시 열 수 있습니다.</p>
                 </div>
-                <Link href="/rooms/new" className="btn-primary">새 방 만들기</Link>
+                <Link href="/rooms/new" className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 sm:w-auto">새 방 만들기</Link>
               </div>
 
               {error && <div className="app-alert app-alert-danger mb-4"><p className="text-sm font-medium">{error}</p></div>}
@@ -275,7 +354,7 @@ export default function MyPage() {
                   {rooms.map((room) => (
                     <Link key={room.roomId} href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="spring rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
                       <div className="mb-3 flex items-center justify-between gap-3">
-                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">{room.status}</span>
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>{roomStatusLabel(room)}</span>
                         <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
                       </div>
                       <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>

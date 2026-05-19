@@ -20,6 +20,9 @@ type RoomPayload = {
   hostUserId: number;
   memberCount: number;
   createdAt: string;
+  hasGeneratedSchedule?: boolean;
+  confirmedScheduleId?: number | null;
+  latestScheduleVersion?: number | null;
 };
 
 function isRoomPayload(value: unknown): value is RoomPayload {
@@ -34,7 +37,10 @@ function isRoomPayload(value: unknown): value is RoomPayload {
     typeof room.status === 'string' &&
     typeof room.hostUserId === 'number' &&
     typeof room.memberCount === 'number' &&
-    typeof room.createdAt === 'string'
+    typeof room.createdAt === 'string' &&
+    (room.hasGeneratedSchedule === undefined || typeof room.hasGeneratedSchedule === 'boolean') &&
+    (room.confirmedScheduleId === undefined || room.confirmedScheduleId === null || typeof room.confirmedScheduleId === 'number') &&
+    (room.latestScheduleVersion === undefined || room.latestScheduleVersion === null || typeof room.latestScheduleVersion === 'number')
   );
 }
 
@@ -64,6 +70,14 @@ function roomStatusClassName(room: Room) {
   if (room.status === 'completed') return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
   if (room.status === 'ready') return 'bg-blue-50 text-blue-700 ring-blue-100';
   return 'bg-amber-50 text-amber-700 ring-amber-100';
+}
+
+function archivedRoomsFrom(rooms: Room[]) {
+  return rooms.filter((room) => typeof room.confirmedScheduleId === 'number').slice(0, 3);
+}
+
+function albumHref(room: Room) {
+  return `/schedules/${room.confirmedScheduleId}/album`;
 }
 
 
@@ -156,17 +170,61 @@ function MyRoomsPanel() {
     };
   }, [setCurrentRoom, user]);
 
-  const visibleRooms = useMemo(() => {
+  const allRooms = useMemo(() => {
     const byId = new Map<number, Room>();
     rooms.forEach((room) => byId.set(room.roomId, room));
     if (currentRoom) byId.set(currentRoom.roomId, byId.get(currentRoom.roomId) ?? currentRoom);
-    return Array.from(byId.values()).sort((a, b) => b.roomId - a.roomId).slice(0, 3);
+    return Array.from(byId.values()).sort((a, b) => b.roomId - a.roomId);
   }, [currentRoom, rooms]);
+
+  const visibleRooms = useMemo(() => allRooms.slice(0, 3), [allRooms]);
+  const archivedRooms = useMemo(() => archivedRoomsFrom(allRooms), [allRooms]);
 
   if ((!user || user.isGuest) && visibleRooms.length === 0) return null;
 
   return (
-    <section className="mb-24 rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_16px_42px_rgba(37,99,235,0.08)]">
+    <section className="mb-24 space-y-5">
+      {archivedRooms.length > 0 ? (
+        <div className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_16px_42px_rgba(16,185,129,0.08)]">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                <iconify-icon icon="solar:gallery-wide-bold-duotone" width="15"></iconify-icon>
+                나의 여행기
+              </div>
+              <h2 className="text-2xl font-black tracking-tight text-zinc-900">나의 여행기</h2>
+              <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
+                다녀온 여행의 사진과 장소별 순간을 홈에서 바로 다시 꺼내볼 수 있습니다.
+              </p>
+            </div>
+            <Link href="/mypage" className="text-sm font-bold text-emerald-700">마이페이지에서 모두 보기</Link>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {archivedRooms.map((room) => (
+              <Link
+                key={room.roomId}
+                href={albumHref(room)}
+                className="spring group overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200"
+              >
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
+                  <iconify-icon icon="solar:album-bold-duotone" width="23"></iconify-icon>
+                </div>
+                <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
+                <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
+                  {formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}
+                </p>
+                <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-emerald-700">
+                  여행기 열기
+                  <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_16px_42px_rgba(37,99,235,0.08)]">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
@@ -178,10 +236,16 @@ function MyRoomsPanel() {
             홈으로 돌아와도 참여 중인 여행 계획을 바로 이어서 확인할 수 있습니다.
           </p>
         </div>
-        <Link href="/rooms/new" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(15,23,42,0.18)]">
-          새 방 만들기
-          <iconify-icon icon="solar:add-circle-bold" width="15"></iconify-icon>
-        </Link>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link href="/mypage" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+            전체보기
+            <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
+          </Link>
+          <Link href="/rooms/new" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(15,23,42,0.18)]">
+            새 방 만들기
+            <iconify-icon icon="solar:add-circle-bold" width="15"></iconify-icon>
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
@@ -208,6 +272,7 @@ function MyRoomsPanel() {
             </div>
           </Link>
         ))}
+      </div>
       </div>
     </section>
   );

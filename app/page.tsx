@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { authApi, roomApi } from '@/lib/api/client';
+import { authApi, roomApi, tptiApi } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth';
 import type { Room } from '@/lib/types';
 import { formatTripDateRange } from '@/lib/utils/date';
 import { normalizeRoomSummary } from '@/lib/utils/room';
+import { normalizeTptiResultPayload } from '@/lib/utils/tptiResult';
 
 type RoomPayload = {
   roomId: number;
@@ -80,6 +81,41 @@ function albumHref(room: Room) {
   return `/schedules/${room.confirmedScheduleId}/album`;
 }
 
+
+function useTptiHref() {
+  const { user, tptiResult, setTptiResult } = useAuthStore();
+  const [serverResultUserId, setServerResultUserId] = useState<number | null>(null);
+  const storeHasResult = Boolean(tptiResult?.resultId && (!user || tptiResult.userId === user.id));
+
+  useEffect(() => {
+    if (storeHasResult || !user || user.isGuest) {
+      return;
+    }
+
+    let cancelled = false;
+
+    tptiApi.getResult(user.id)
+      .then((res) => {
+        if (cancelled) return;
+        const result = normalizeTptiResultPayload(res.data?.data, user);
+        if (result) {
+          setTptiResult(result);
+          setServerResultUserId(user.id);
+        } else {
+          setServerResultUserId(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setServerResultUserId(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setTptiResult, storeHasResult, user]);
+
+  return storeHasResult || (user && serverResultUserId === user.id) ? '/tpti/result' : '/tpti';
+}
 
 function HomeAuthActions() {
   const { user, clear } = useAuthStore();
@@ -282,6 +318,8 @@ function MyRoomsPanel() {
 }
 
 export default function LandingPage() {
+  const tptiHref = useTptiHref();
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -363,7 +401,7 @@ export default function LandingPage() {
               <span className="font-black text-sm tracking-tight text-zinc-900">TripSync</span>
             </div>
             <div className="w-px h-4 bg-zinc-200" />
-            <Link href="/tpti" className="text-[13px] font-medium text-zinc-700 hover:text-zinc-900 transition-colors duration-200">
+            <Link href={tptiHref} className="text-[13px] font-medium text-zinc-700 hover:text-zinc-900 transition-colors duration-200">
               여행 MBTI 검사
             </Link>
             <Link
@@ -401,7 +439,7 @@ export default function LandingPage() {
               <iconify-icon icon="solar:round-alt-arrow-right-linear" width="17"></iconify-icon>
               </Link>
               <Link
-                href="/tpti"
+                href={tptiHref}
                 className="spring px-8 py-4 rounded-2xl bg-white text-zinc-900 font-bold text-[15px] flex items-center justify-center border border-zinc-200 shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
               >
                 내 여행 성향 알아보기
@@ -449,7 +487,7 @@ export default function LandingPage() {
                   border: 'border-blue-100',
                   title: '여행 MBTI 검사',
                   desc: '8개 질문으로 나의 여행 성향을 분석합니다. 활동성·기록·예산·테마 4개 축으로 정확하게 측정해요.',
-                  href: '/tpti',
+                  href: tptiHref,
                   cta: '검사 시작',
                   ctaColor: 'text-blue-600',
                 },
@@ -568,7 +606,7 @@ export default function LandingPage() {
                 <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
                 </Link>
                 <Link
-                  href="/tpti"
+                  href={tptiHref}
                   className="spring inline-flex px-6 py-3 items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm border border-white/20 transition-colors duration-200"
                 >
                   여행 MBTI 먼저 해보기

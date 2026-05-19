@@ -5,12 +5,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { authApi, roomApi } from '@/lib/api/client';
+import { authApi, roomApi, tptiApi } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth';
 import type { Room } from '@/lib/types';
 import { formatTripDateRange } from '@/lib/utils/date';
 import { getApiErrorMessage } from '@/lib/utils/error';
 import { normalizeRoomSummary } from '@/lib/utils/room';
+import { normalizeTptiResultPayload } from '@/lib/utils/tptiResult';
 
 type RoomPayload = {
   roomId: number;
@@ -76,7 +77,7 @@ function albumHref(room: Room) {
 
 export default function MyPage() {
   const router = useRouter();
-  const { user, setUser, clear, setCurrentRoom } = useAuthStore();
+  const { user, tptiResult, setUser, setTptiResult, clear, setCurrentRoom } = useAuthStore();
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,6 +87,7 @@ export default function MyPage() {
   const [authLoading, setAuthLoading] = useState(false);
   const [oauthSyncing, setOauthSyncing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [tptiSyncing, setTptiSyncing] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -150,6 +152,38 @@ export default function MyPage() {
       cancelled = true;
     };
   }, [user]);
+
+
+  useEffect(() => {
+    if (!user || user.isGuest) {
+      setTptiResult(null);
+      setTptiSyncing(false);
+      return;
+    }
+
+    if (tptiResult?.resultId && tptiResult.userId === user.id) {
+      return;
+    }
+
+    let cancelled = false;
+    setTptiSyncing(true);
+
+    tptiApi.getResult(user.id)
+      .then((res) => {
+        if (cancelled) return;
+        setTptiResult(normalizeTptiResultPayload(res.data?.data, user));
+      })
+      .catch(() => {
+        if (!cancelled) setTptiResult(null);
+      })
+      .finally(() => {
+        if (!cancelled) setTptiSyncing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setTptiResult, tptiResult, user]);
 
   async function handleAuth(e: FormEvent) {
     e.preventDefault();
@@ -273,8 +307,32 @@ export default function MyPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <span className="app-kicker mb-3 bg-blue-50 text-blue-600 border-blue-100">Profile</span>
-                  <h1 className="text-3xl font-black tracking-tight text-zinc-900">{user.nickname}님</h1>
-                  <p className="mt-2 text-sm font-normal text-zinc-700">{user.email ?? user.authProvider} 계정으로 로그인 중</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-3xl font-black tracking-tight text-zinc-900">{user.nickname}님</h1>
+                    {tptiResult?.resultId && tptiResult.userId === user.id ? (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
+                        <span aria-hidden>{tptiResult.characterEmoji}</span>
+                        {tptiResult.characterName}
+                      </span>
+                    ) : tptiSyncing ? (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm font-bold text-zinc-600">
+                        여행 MBTI 확인 중…
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-700">
+                        여행 MBTI 미완료
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link
+                      href={tptiResult?.resultId && tptiResult.userId === user.id ? '/tpti/result' : '/tpti'}
+                      className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] transition hover:bg-blue-700 sm:w-auto"
+                    >
+                      여행 MBTI 보러가기
+                      <iconify-icon icon="solar:arrow-right-linear" width="16"></iconify-icon>
+                    </Link>
+                  </div>
                 </div>
                 <button className="inline-flex w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto" type="button" onClick={handleLogout} disabled={loggingOut}>
                   {loggingOut ? '로그아웃 중…' : '로그아웃'}

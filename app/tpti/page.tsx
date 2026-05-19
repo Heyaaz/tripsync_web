@@ -1,23 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TPTI_QUESTIONS, calculateScores, getCharacter } from '@/lib/utils/tpti';
 import { useAuthStore } from '@/lib/store/auth';
 import { authApi, tptiApi } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/utils/error';
+import { normalizeTptiResultPayload } from '@/lib/utils/tptiResult';
 import type { TptiResult } from '@/lib/types';
 
 type Step = 'intro' | 'questions' | 'submitting';
 
 export default function TptiPage() {
   const router = useRouter();
-  const { setTptiResult, setUser, user } = useAuthStore();
+  const { tptiResult, setTptiResult, setUser, user } = useAuthStore();
   const [step, setStep] = useState<Step>('intro');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<number[]>(Array(8).fill(0));
   const [nickname, setNickname] = useState('');
+  const [checkingSavedResult, setCheckingSavedResult] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncSavedResult() {
+      if (!user || user.isGuest) {
+        setCheckingSavedResult(false);
+        return;
+      }
+
+      if (tptiResult?.resultId && tptiResult.userId === user.id) {
+        router.replace('/tpti/result');
+        return;
+      }
+
+      setCheckingSavedResult(true);
+      try {
+        const res = await tptiApi.getResult(user.id);
+        const result = normalizeTptiResultPayload(res.data?.data, user);
+        if (cancelled) return;
+        if (result) {
+          setTptiResult(result);
+          router.replace('/tpti/result');
+        }
+      } catch {
+        // 저장된 결과가 없으면 기존 검사 시작 화면을 그대로 보여준다.
+      } finally {
+        if (!cancelled) setCheckingSavedResult(false);
+      }
+    }
+
+    void syncSavedResult();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, setTptiResult, tptiResult, user]);
 
   const progress = ((currentQ) / TPTI_QUESTIONS.length) * 100;
   const q = TPTI_QUESTIONS[currentQ];
@@ -162,32 +201,45 @@ export default function TptiPage() {
                 </div>
 
                 <span className="app-kicker mb-4">Quick Setup</span>
-                <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">30초 안에 시작할 수 있어요</h2>
-                <p className="body-md mb-8 text-zinc-700">검사를 완료하면 결과 페이지에서 나의 유형을 보고, 바로 여행 계획 생성까지 이어갈 수 있습니다.</p>
+                {checkingSavedResult ? (
+                  <>
+                    <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">저장된 여행 MBTI를 확인 중이에요</h2>
+                    <p className="body-md mb-8 text-zinc-700">이전에 완료한 검사 결과가 있으면 결과 화면으로 바로 이동합니다.</p>
+                    <div className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
+                      <span className="h-5 w-5 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+                      저장된 결과 확인 중…
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-[28px] font-black tracking-tight text-zinc-900 mb-2">30초 안에 시작할 수 있어요</h2>
+                    <p className="body-md mb-8 text-zinc-700">검사를 완료하면 결과 페이지에서 나의 유형을 보고, 바로 여행 계획 생성까지 이어갈 수 있습니다.</p>
 
-                {!user && (
-                  <div className="mb-8">
-                    <label className="block text-sm font-medium text-zinc-700 mb-3">검사에 사용할 닉네임</label>
-                    <input
-                      className="input-field max-w-sm"
-                      placeholder="예: 예민한 탐험가"
-                      value={nickname}
-                      onChange={(e) => setNickname(e.target.value)}
-                      maxLength={12}
-                    />
-                  </div>
+                    {!user && (
+                      <div className="mb-8">
+                        <label className="block text-sm font-medium text-zinc-700 mb-3">검사에 사용할 닉네임</label>
+                        <input
+                          className="input-field max-w-sm"
+                          placeholder="예: 예민한 탐험가"
+                          value={nickname}
+                          onChange={(e) => setNickname(e.target.value)}
+                          maxLength={12}
+                        />
+                      </div>
+                    )}
+
+                    {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
+
+                    <button
+                      className="btn-primary w-full sm:w-auto"
+                      onClick={() => {
+                        void handleStart();
+                      }}
+                    >
+                      검사 시작하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                    </button>
+                  </>
                 )}
-
-                {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
-
-                <button
-                  className="btn-primary w-full sm:w-auto"
-                  onClick={() => {
-                    void handleStart();
-                  }}
-                >
-                  검사 시작하기 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
-                </button>
               </div>
             </div>
           </div>

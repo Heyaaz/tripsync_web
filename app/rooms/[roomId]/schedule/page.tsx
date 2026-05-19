@@ -514,7 +514,7 @@ export default function SchedulePage() {
               <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
                 <iconify-icon icon="solar:round-transfer-diagonal-bold-duotone" className="text-blue-500" width="18"></iconify-icon>
               </div>
-              서로의 취향 충돌 분해 중
+              서로의 취향 차이 조율 중
             </div>
             <div className="p-4 bg-white border border-zinc-200 rounded-[20px] text-sm text-zinc-700 font-normal flex gap-3 items-center shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
               <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">

@@ -34,7 +34,7 @@ const GRADIENTS = [
 
 export default function TptiResultPage() {
   const router = useRouter();
-  const { tptiResult, currentRoom } = useAuthStore();
+  const { tptiResult } = useAuthStore();
   const [shareFeedback, setShareFeedback] = useState('');
 
   useEffect(() => {
@@ -103,17 +103,11 @@ export default function TptiResultPage() {
         <div className="w-11 shrink-0" />
       </div>
 
-      <div className="app-content min-h-[100dvh] flex flex-col justify-center pt-24 pb-16 relative">
-        <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-blue-50 to-transparent pointer-events-none" />
-
-        <div className="max-w-3xl mx-auto w-full relative z-10 space-y-6">
+      <div className="app-content min-h-[100dvh] flex flex-col justify-center pt-24 pb-16">
+        <div className="max-w-3xl mx-auto w-full space-y-6">
           {/* Hero Result Card */}
           <div className="card-bezel animate-fadeInUp delay-1">
             <div className="card-bezel-inner relative overflow-hidden bg-white p-6 md:p-8">
-              <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-r ${gradientClass} opacity-[0.09]`} />
-              <div className="absolute right-10 top-6 h-28 w-28 rounded-full bg-blue-100/60 blur-3xl" />
-              <div className="absolute -left-4 bottom-0 h-28 w-28 rounded-full bg-violet-100/45 blur-3xl" />
-
               <div className="relative z-10">
                 <div className="mb-5 flex flex-wrap items-center gap-2">
                   <span className="app-kicker">나의 여행 MBTI 결과</span>
@@ -182,9 +176,6 @@ export default function TptiResultPage() {
                           점수와 키워드로 빠르게 확인해요
                         </p>
                       </div>
-                      <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-bold tracking-[0.14em] text-zinc-500">
-                        4 AXES
-                      </span>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -258,28 +249,9 @@ export default function TptiResultPage() {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-4 animate-fadeInUp delay-4">
-            {currentRoom ? (
-              <button
-                className="btn-primary py-4 text-base"
-                onClick={() => router.push(`/rooms/${currentRoom.roomId}/conflict`)}
-              >
-                그룹 궁합 지도 보기 <iconify-icon icon="solar:arrow-right-linear" width="20"></iconify-icon>
-              </button>
-            ) : (
-              <>
-                <button
-                  className="btn-primary py-4 text-base"
-                  onClick={() => router.push('/rooms/new')}
-                >
-                  <iconify-icon icon="solar:routing-3-bold-duotone" width="22"></iconify-icon>
-                  동행자 초대하고 궁합 지도 만들기
-                </button>
-              </>
-            )}
-            
             <button
               onClick={() => router.push('/tpti')}
-              className="mt-4 text-sm text-zinc-700 font-bold max-w-[240px] mx-auto"
+              className="text-sm text-zinc-700 font-bold max-w-[240px] mx-auto"
             >
               검사 다시하기
             </button>

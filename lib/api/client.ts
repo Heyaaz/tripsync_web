@@ -54,6 +54,8 @@ export const roomApi = {
 
   getMyRooms: () => apiClient.get('/rooms/my'),
 
+  delete: (id: number) => apiClient.delete(`/rooms/${id}`),
+
   getByShareCode: (shareCode: string) => apiClient.get(`/rooms/share/${shareCode}`),
 
   join: (shareCode: string, data: { tptiResultId?: number }) =>

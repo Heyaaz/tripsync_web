@@ -75,9 +75,14 @@ function albumHref(room: Room) {
   return `/schedules/${room.confirmedScheduleId}/album`;
 }
 
+function roomActionIcon(room: Room, userId: number, isBusy: boolean) {
+  if (isBusy) return 'solar:refresh-linear';
+  return room.hostUserId === userId ? 'solar:trash-bin-trash-linear' : 'solar:logout-3-linear';
+}
+
 export default function MyPage() {
   const router = useRouter();
-  const { user, tptiResult, setUser, setTptiResult, clear, setCurrentRoom } = useAuthStore();
+  const { user, tptiResult, currentRoom, setUser, setTptiResult, clear, setCurrentRoom } = useAuthStore();
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -87,6 +92,8 @@ export default function MyPage() {
   const [authLoading, setAuthLoading] = useState(false);
   const [oauthSyncing, setOauthSyncing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
+  const [deleteTargetRoom, setDeleteTargetRoom] = useState<Room | null>(null);
   const [tptiSyncing, setTptiSyncing] = useState(false);
   const [error, setError] = useState('');
   const [isArchiveOpen, setIsArchiveOpen] = useState(true);
@@ -222,6 +229,25 @@ export default function MyPage() {
       clear();
       setRooms([]);
       setLoggingOut(false);
+    }
+  }
+
+  async function confirmDeleteRoom() {
+    const room = deleteTargetRoom;
+    if (!room || !user || user.isGuest || deletingRoomId) return;
+
+    const isHost = room.hostUserId === user.id;
+    setDeletingRoomId(room.roomId);
+    setError('');
+    try {
+      await roomApi.delete(room.roomId);
+      setRooms((prev) => prev.filter((item) => item.roomId !== room.roomId));
+      if (currentRoom?.roomId === room.roomId) setCurrentRoom(null);
+      setDeleteTargetRoom(null);
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, isHost ? '여행 방을 삭제하지 못했습니다.' : '여행 방을 나가지 못했습니다.'));
+    } finally {
+      setDeletingRoomId(null);
     }
   }
 
@@ -403,20 +429,28 @@ export default function MyPage() {
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {archivedRooms.map((room) => (
-                    <Link key={room.roomId} href={albumHref(room)} className="spring group overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200">
-                      <div className="mb-4 flex items-start justify-between gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
+                    <article key={room.roomId} className="spring group relative overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/70 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200">
+                      <Link href={albumHref(room)} className="block p-5 pr-16" onClick={() => setCurrentRoom(room)}>
+                        <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
                           <iconify-icon icon="solar:album-bold-duotone" width="23"></iconify-icon>
                         </div>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">여행기</span>
-                      </div>
-                      <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
-                      <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
-                      <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-emerald-700">
-                        추억 여행기 열기
-                        <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
-                      </div>
-                    </Link>
+                        <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
+                        <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
+                        <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-emerald-700">
+                          추억 여행기 열기
+                          <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
+                        </div>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTargetRoom(room)}
+                        disabled={deletingRoomId === room.roomId}
+                        className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-[0_8px_18px_rgba(239,68,68,0.08)] transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        aria-label={room.hostUserId === user.id ? '여행 방 삭제' : '여행 방 나가기'}
+                      >
+                        <iconify-icon icon={roomActionIcon(room, user.id, deletingRoomId === room.roomId)} width="17"></iconify-icon>
+                      </button>
+                    </article>
                   ))}
                 </div>
               ) : null}
@@ -458,14 +492,25 @@ export default function MyPage() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {rooms.map((room) => (
-                      <Link key={room.roomId} href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="spring rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>{roomStatusLabel(room)}</span>
-                          <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
-                        </div>
-                        <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
-                        <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
-                      </Link>
+                      <article key={room.roomId} className="spring relative rounded-2xl border border-zinc-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
+                        <Link href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="block p-5 pr-16">
+                          <div className="mb-3 flex items-center gap-3">
+                            <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>{roomStatusLabel(room)}</span>
+                            <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
+                          </div>
+                          <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
+                          <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTargetRoom(room)}
+                          disabled={deletingRoomId === room.roomId}
+                          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-[0_8px_18px_rgba(239,68,68,0.08)] transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={room.hostUserId === user.id ? '여행 방 삭제' : '여행 방 나가기'}
+                        >
+                          <iconify-icon icon={roomActionIcon(room, user.id, deletingRoomId === room.roomId)} width="17"></iconify-icon>
+                        </button>
+                      </article>
                     ))}
                   </div>
                 )}
@@ -474,6 +519,43 @@ export default function MyPage() {
           </div>
         )}
       </div>
+
+      {deleteTargetRoom ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-room-title">
+          <div className="w-full max-w-md rounded-[28px] border border-red-100 bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)]">
+            <div className="mb-5">
+              <h2 id="delete-room-title" className="text-xl font-black tracking-tight text-zinc-900">
+                {deleteTargetRoom.hostUserId === user?.id ? '여행 방을 삭제할까요?' : '여행 방을 나갈까요?'}
+              </h2>
+              <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
+                <span className="font-bold text-zinc-900">{deleteTargetRoom.roomName ?? `${deleteTargetRoom.destination} 여행 계획`}</span>{' '}
+                {deleteTargetRoom.hostUserId === user?.id ? '방과 여행기가 모든 멤버 목록에서 사라집니다.' : '방이 내 목록에서 사라집니다.'}<br />
+                {deleteTargetRoom.hostUserId === user?.id ? '삭제한 방과 여행기는 복구할 수 없습니다.' : '내가 올린 사진은 여행기 아카이브에 유지됩니다.'}
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetRoom(null)}
+                disabled={deletingRoomId === deleteTargetRoom.roomId}
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDeleteRoom()}
+                disabled={deletingRoomId === deleteTargetRoom.roomId}
+                className="inline-flex h-12 items-center justify-center rounded-2xl bg-red-500 px-5 text-sm font-bold text-white shadow-[0_8px_22px_rgba(239,68,68,0.20)] transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingRoomId === deleteTargetRoom.roomId
+                  ? (deleteTargetRoom.hostUserId === user?.id ? '삭제 중…' : '나가는 중…')
+                  : (deleteTargetRoom.hostUserId === user?.id ? '삭제하기' : '나가기')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

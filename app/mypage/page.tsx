@@ -430,7 +430,7 @@ export default function MyPage() {
                 <div className="grid gap-3 md:grid-cols-2">
                   {archivedRooms.map((room) => (
                     <article key={room.roomId} className="spring group relative overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/70 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200">
-                      <Link href={albumHref(room)} className="block p-5 pr-16" onClick={() => setCurrentRoom(room)}>
+                      <Link href={albumHref(room)} className="block p-5" onClick={() => setCurrentRoom(room)}>
                         <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
                           <iconify-icon icon="solar:album-bold-duotone" width="23"></iconify-icon>
                         </div>
@@ -441,15 +441,6 @@ export default function MyPage() {
                           <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
                         </div>
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTargetRoom(room)}
-                        disabled={deletingRoomId === room.roomId}
-                        className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-[0_8px_18px_rgba(239,68,68,0.08)] transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={room.hostUserId === user.id ? '여행 방 삭제' : '여행 방 나가기'}
-                      >
-                        <iconify-icon icon={roomActionIcon(room, user.id, deletingRoomId === room.roomId)} width="17"></iconify-icon>
-                      </button>
                     </article>
                   ))}
                 </div>

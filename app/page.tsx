@@ -138,7 +138,7 @@ function HomeAuthActions() {
     return (
       <Link
         href="/rooms/new"
-        className="spring flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-800 shadow-[0_2px_8px_rgba(15,23,42,0.06)]"
+        className="spring inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-800 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:h-auto sm:px-3.5 sm:py-1.5"
       >
         로그인
       </Link>
@@ -146,26 +146,24 @@ function HomeAuthActions() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-1 sm:gap-2">
       <Link
         href="/mypage"
-        className="spring hidden rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-[13px] font-bold text-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.08)] sm:inline-flex"
+        aria-label="마이페이지"
+        className="spring inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white px-2.5 text-xs font-semibold text-zinc-800 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:h-auto sm:w-auto sm:px-3.5 sm:py-1.5 sm:text-[13px] sm:font-bold"
       >
-        마이페이지
-      </Link>
-      <Link
-        href="/mypage"
-        className="spring inline-flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-700 shadow-[0_2px_8px_rgba(37,99,235,0.08)] sm:hidden"
-      >
-        마이페이지
+        <span className="whitespace-nowrap sm:hidden">마이페이지</span>
+        <span className="hidden whitespace-nowrap sm:inline">마이페이지</span>
       </Link>
       <button
         type="button"
         onClick={handleLogout}
         disabled={loggingOut}
-        className="spring flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-800 shadow-[0_2px_8px_rgba(15,23,42,0.06)] disabled:cursor-not-allowed disabled:opacity-60"
+        aria-label={loggingOut ? '로그아웃 중' : '로그아웃'}
+        className="spring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_2px_8px_rgba(15,23,42,0.06)] disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:w-auto sm:px-3.5 sm:py-1.5 sm:text-xs sm:font-bold sm:text-zinc-800"
       >
-        {loggingOut ? '로그아웃 중' : '로그아웃'}
+        <iconify-icon className="sm:hidden" icon={loggingOut ? 'solar:refresh-bold-duotone' : 'solar:logout-2-bold-duotone'} width="18"></iconify-icon>
+        <span className="hidden whitespace-nowrap sm:inline">{loggingOut ? '로그아웃 중' : '로그아웃'}</span>
       </button>
     </div>
   );
@@ -392,26 +390,30 @@ export default function LandingPage() {
         </div>
 
         {/* Nav */}
-        <header className="fixed top-4 inset-x-0 z-50 flex justify-center pointer-events-none">
-          <nav className="flex items-center gap-5 bg-white px-5 py-2.5 rounded-2xl border border-zinc-200 shadow-[0_8px_28px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.92)] pointer-events-auto transition-shadow duration-300 hover:shadow-[0_10px_34px_rgba(15,23,42,0.1)]">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.45)]">
+        <header className="fixed top-3 inset-x-0 z-50 flex justify-center px-3 pointer-events-none sm:top-4 sm:px-0">
+          <nav className="flex w-full max-w-[calc(100vw-24px)] items-center justify-between gap-2 rounded-[26px] border border-zinc-200 bg-white/95 px-3 py-2 shadow-[0_8px_28px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-xl pointer-events-auto transition-shadow duration-300 hover:shadow-[0_10px_34px_rgba(15,23,42,0.1)] sm:w-auto sm:max-w-none sm:justify-center sm:gap-5 sm:rounded-2xl sm:bg-white sm:px-5 sm:py-2.5">
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 shadow-[0_4px_12px_rgba(37,99,235,0.45)]">
               <iconify-icon icon="solar:routing-3-bold" width="16" style={{ color: 'white' }}></iconify-icon>
               </div>
               <span className="font-black text-sm tracking-tight text-zinc-900">TripSync</span>
             </div>
-            <div className="w-px h-4 bg-zinc-200" />
-            <Link href={tptiHref} className="text-[13px] font-medium text-zinc-700 hover:text-zinc-900 transition-colors duration-200">
-              여행 MBTI 검사
-            </Link>
-            <Link
-              href="/rooms/new"
-              className="spring flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
-            >
-              여행 시작
-              <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
-            </Link>
-            <HomeAuthActions />
+            <div className="hidden h-4 w-px bg-zinc-200 sm:block" />
+            <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-5">
+              <Link href={tptiHref} className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-xl px-1.5 text-xs font-semibold text-zinc-700 transition-colors duration-200 hover:bg-zinc-50 hover:text-zinc-900 sm:h-auto sm:px-0 sm:text-[13px] sm:font-medium">
+                <span className="sm:hidden">성향 검사</span>
+                <span className="hidden sm:inline">여행 MBTI 검사</span>
+              </Link>
+              <Link
+                href="/rooms/new"
+                className="spring inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-xl bg-zinc-900 px-2.5 text-xs font-semibold text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)] hover:bg-zinc-700 sm:h-auto sm:gap-1.5 sm:px-3.5 sm:py-1.5 sm:font-bold"
+              >
+                <span className="whitespace-nowrap sm:hidden">여행 계획</span>
+                <span className="hidden whitespace-nowrap sm:inline">여행 시작</span>
+                <iconify-icon icon="solar:alt-arrow-right-bold" width="11"></iconify-icon>
+              </Link>
+              <HomeAuthActions />
+            </div>
           </nav>
         </header>
 

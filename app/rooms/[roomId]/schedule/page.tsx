@@ -20,6 +20,20 @@ function getProposalStepLabel(index: number) {
   return labels[index] ?? `${index + 1}번째 코스`;
 }
 
+function getSlotDateKey(slot: ScheduleSlot) {
+  return slot.startTime.slice(0, 10);
+}
+
+function getDayIndex(slots: ScheduleSlot[], slot: ScheduleSlot) {
+  const dates = Array.from(new Set(slots.map(getSlotDateKey)));
+  return dates.indexOf(getSlotDateKey(slot)) + 1;
+}
+
+function shouldShowDayHeader(slots: ScheduleSlot[], index: number) {
+  if (index === 0) return true;
+  return getSlotDateKey(slots[index]) !== getSlotDateKey(slots[index - 1]);
+}
+
 const GENERATING_MESSAGES = [
   '서로의 취향을 맞춰보는 중…',
   '충남 여행 코스를 정리하는 중…',
@@ -39,6 +53,61 @@ function cleanDisplayText(text?: string | null) {
     .replace(/\s+/g, ' ')
     .replace(/[.。]+$/g, '')
     .trim();
+}
+
+function isRegionalBenefitPlace(place?: Place | null) {
+  return !!(place?.isRegionalBenefit || place?.isDepopulationArea || place?.popularity?.role === 'regional_benefit');
+}
+
+function getPlaceSignalLabel(place?: Place | null) {
+  if (!place?.popularity?.hasExternalSignal && !isRegionalBenefitPlace(place)) {
+    return null;
+  }
+
+  if (place?.popularity?.role === 'popular_anchor') {
+    return place.popularity.label ?? '많이 찾는 대표 장소';
+  }
+
+  if (isRegionalBenefitPlace(place)) {
+    return place?.popularity?.label ?? '지역상생 추천 장소';
+  }
+
+  return place?.popularity?.label ?? null;
+}
+
+function getPlaceSignalBadgeClass(place?: Place | null) {
+  if (place?.popularity?.role === 'popular_anchor') {
+    return 'border-sky-200 bg-sky-50 text-sky-700';
+  }
+
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+}
+
+function getDisplayImageUrl(imageUrl?: string | null) {
+  if (!imageUrl) return null;
+
+  try {
+    const url = new URL(imageUrl);
+    if (url.pathname.startsWith('/api/')) {
+      return `${url.pathname}${url.search}`;
+    }
+  } catch {
+    return imageUrl;
+  }
+
+  return imageUrl;
+}
+
+function getOptionSignalSummary(option?: ScheduleOption | null) {
+  const slots = option?.slots ?? [];
+  const popularAnchorCount = slots.filter((slot) => slot.place.popularity?.role === 'popular_anchor').length;
+  const regionalBenefitCount = slots.filter((slot) => isRegionalBenefitPlace(slot.place)).length;
+
+  return {
+    popularAnchorCount,
+    regionalBenefitCount,
+    hasSignals: popularAnchorCount > 0 || regionalBenefitCount > 0,
+  };
 }
 
 function SatisfactionBar({ score, nickname, color }: { score: number; nickname: string; color: string }) {
@@ -293,7 +362,7 @@ export default function SchedulePage() {
     setDetailModalSlot({
       slot,
       accentColor,
-      isLocal: !!slot.place.isDepopulationArea,
+      isLocal: isRegionalBenefitPlace(slot.place),
       scheduleTitle,
       scheduleSummary: cleanDisplayText(scheduleSummary),
       scheduleSlots,
@@ -309,7 +378,7 @@ export default function SchedulePage() {
     setDetailModalSlot({
       slot: firstSlot,
       accentColor: '#2563EB',
-      isLocal: !!firstSlot.place.isDepopulationArea,
+      isLocal: isRegionalBenefitPlace(firstSlot.place),
       scheduleTitle,
       scheduleSummary: cleanDisplayText(option.summary),
       scheduleSlots: option.slots,
@@ -555,6 +624,7 @@ export default function SchedulePage() {
             const isSelected = selectedOption?.optionType === opt.optionType;
             const isExpanded = expandedOption === opt.optionType;
             const metaColorStr = meta.color; // e.g. '#10B981'
+            const signalSummary = getOptionSignalSummary(opt);
 
             return (
               <div
@@ -589,6 +659,21 @@ export default function SchedulePage() {
                   <p className="text-zinc-700 text-sm font-normal leading-relaxed mb-5 ml-7">
                     {cleanDisplayText(opt.summary)}
                   </p>
+
+                  {signalSummary.hasSignals && (
+                    <div className="ml-7 mb-5 flex flex-wrap gap-2">
+                      {signalSummary.popularAnchorCount > 0 && (
+                        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12px] font-medium text-sky-700">
+                          대표 장소 {signalSummary.popularAnchorCount}곳
+                        </span>
+                      )}
+                      {signalSummary.regionalBenefitCount > 0 && (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-medium text-emerald-700">
+                          지역상생 장소 {signalSummary.regionalBenefitCount}곳
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {opt.personaValidation && (
                     <div className="ml-7 mb-5">
@@ -670,22 +755,31 @@ export default function SchedulePage() {
                         const isPersonal = slot.slotType === 'personal';
                         const memberIdx = isPersonal ? opt.satisfactionByUser.findIndex((m) => m.userId === slot.targetUserId) : -1;
                         const accentColor = memberIdx >= 0 ? MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] : '#10B981';
+                        const signalLabel = getPlaceSignalLabel(slot.place);
 
                         return (
-                          <div 
-                            key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`} 
-                            className="bg-white border border-zinc-200 rounded-[20px] p-4 shadow-sm transition-all cursor-pointer hover:border-zinc-300 hover:shadow-md"
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              openDetailModal({
-                                slot,
-                                accentColor,
-                                scheduleTitle: meta.label,
-                                scheduleSummary: opt.summary,
-                                scheduleSlots: opt.slots ?? [],
-                              });
-                            }}
-                          >
+                          <div key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`} className="space-y-2">
+                            {shouldShowDayHeader(opt.slots ?? [], index) && (
+                              <div className="flex items-center gap-2 px-1 pt-1">
+                                <span className="rounded-full bg-zinc-900 px-2.5 py-1 text-[12px] font-bold text-white">
+                                  {getDayIndex(opt.slots ?? [], slot)}일차
+                                </span>
+                                <span className="text-[12px] font-medium text-zinc-600">{getSlotDateKey(slot)}</span>
+                              </div>
+                            )}
+                            <div
+                              className="bg-white border border-zinc-200 rounded-[20px] p-4 shadow-sm transition-all cursor-pointer hover:border-zinc-300 hover:shadow-md"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDetailModal({
+                                  slot,
+                                  accentColor,
+                                  scheduleTitle: meta.label,
+                                  scheduleSummary: opt.summary,
+                                  scheduleSlots: opt.slots ?? [],
+                                });
+                              }}
+                            >
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center gap-2">
                                 <span
@@ -694,9 +788,9 @@ export default function SchedulePage() {
                                 >
                                   {getProposalStepLabel(index)}
                                 </span>
-                                {slot.place.isDepopulationArea && (
-                                  <span className="text-[12px] font-normal text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full bg-emerald-50">
-                                    로컬 픽
+                                {signalLabel && (
+                                  <span className={`rounded-full border px-2 py-1 text-[12px] font-normal ${getPlaceSignalBadgeClass(slot.place)}`}>
+                                    {signalLabel}
                                   </span>
                                 )}
                               </div>
@@ -734,6 +828,7 @@ export default function SchedulePage() {
                               </div>
                             )}
                             </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -800,7 +895,7 @@ export default function SchedulePage() {
                   {detailModalSlot.slot.place.imageUrl && (
                     <div className="relative w-full aspect-video bg-zinc-100">
                       <Image
-                        src={detailModalSlot.slot.place.imageUrl}
+                        src={getDisplayImageUrl(detailModalSlot.slot.place.imageUrl) ?? detailModalSlot.slot.place.imageUrl}
                         alt={detailModalSlot.slot.place.name}
                         fill
                         sizes="(max-width: 640px) 100vw, 384px"
@@ -813,8 +908,8 @@ export default function SchedulePage() {
                   <div className={`p-6 ${detailModalSlot.slot.place.imageUrl ? '-mt-6 relative z-10 bg-white rounded-t-[24px]' : 'pt-10'}`}>
                     <div className="flex items-center gap-2 mb-3">
                       {detailModalSlot.isLocal && (
-                        <span className="text-[11px] font-normal text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full bg-emerald-50">
-                          로컬 픽
+                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-normal ${getPlaceSignalBadgeClass(detailModalSlot.slot.place)}`}>
+                          {getPlaceSignalLabel(detailModalSlot.slot.place) ?? '지역상생 추천 장소'}
                         </span>
                       )}
                       {detailModalSlot.slot.slotType === 'personal' && detailModalSlot.slot.targetNickname && (
@@ -932,6 +1027,20 @@ export default function SchedulePage() {
               <span>만족도 <span className="font-black">{confirmedOption.groupSatisfaction}%</span></span>
             </div>
           )}
+          {getOptionSignalSummary(confirmedOption).hasSignals && (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {getOptionSignalSummary(confirmedOption).popularAnchorCount > 0 && (
+                <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12px] font-medium text-sky-700">
+                  대표 장소 {getOptionSignalSummary(confirmedOption).popularAnchorCount}곳
+                </span>
+              )}
+              {getOptionSignalSummary(confirmedOption).regionalBenefitCount > 0 && (
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-medium text-emerald-700">
+                  지역상생 장소 {getOptionSignalSummary(confirmedOption).regionalBenefitCount}곳
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-6">
@@ -944,7 +1053,8 @@ export default function SchedulePage() {
             </h3>
             {confirmedOption && (
               <p className="text-sm text-zinc-700 font-medium leading-relaxed relative z-10">
-                이 일정은 충남 인구감소지역 내 숨은 명소 <strong>{confirmedOption.slots?.filter((s) => s.place.isDepopulationArea).length ?? 0}곳</strong> 방문을 포함합니다. 뜻깊은 기여에 감사드립니다.
+                이 일정은 충남 지역상생 추천 장소 <strong>{getOptionSignalSummary(confirmedOption).regionalBenefitCount}곳</strong>
+                과 대표 유입 장소 <strong>{getOptionSignalSummary(confirmedOption).popularAnchorCount}곳</strong>을 함께 포함합니다.
               </p>
             )}
           </div>
@@ -981,20 +1091,29 @@ export default function SchedulePage() {
                   const isPersonal = slot.slotType === 'personal';
                   const memberIdx = isPersonal ? confirmedOption.satisfactionByUser.findIndex((m) => m.userId === slot.targetUserId) : -1;
                   const accentColor = memberIdx >= 0 ? MEMBER_COLORS[memberIdx % MEMBER_COLORS.length] : '#10B981';
+                  const signalLabel = getPlaceSignalLabel(slot.place);
 
                   return (
-                    <button
-                      key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`}
-                      type="button"
-                      className="group relative z-10 grid w-full grid-cols-[2rem_minmax(0,1fr)] gap-4 rounded-[22px] border border-transparent px-0 py-1 text-left transition hover:border-zinc-200 hover:bg-zinc-50"
-                      onClick={() => openDetailModal({
-                        slot,
-                        accentColor,
-                        scheduleTitle: '확정 일정',
-                        scheduleSummary: confirmedOption.summary,
-                        scheduleSlots: confirmedOption.slots ?? [],
-                      })}
-                    >
+                    <div key={slot.slotId ?? `${slot.orderIndex}-${slot.place.id}`} className="relative z-10">
+                      {shouldShowDayHeader(confirmedOption.slots ?? [], index) && (
+                        <div className="mb-2 ml-12 flex items-center gap-2">
+                          <span className="rounded-full bg-zinc-900 px-2.5 py-1 text-[12px] font-bold text-white">
+                            {getDayIndex(confirmedOption.slots ?? [], slot)}일차
+                          </span>
+                          <span className="text-[12px] font-medium text-zinc-600">{getSlotDateKey(slot)}</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className="group grid w-full grid-cols-[2rem_minmax(0,1fr)] gap-4 rounded-[22px] border border-transparent px-0 py-1 text-left transition hover:border-zinc-200 hover:bg-zinc-50"
+                        onClick={() => openDetailModal({
+                          slot,
+                          accentColor,
+                          scheduleTitle: '확정 일정',
+                          scheduleSummary: confirmedOption.summary,
+                          scheduleSlots: confirmedOption.slots ?? [],
+                        })}
+                      >
                       <div className="flex justify-center pt-0.5">
                         <div
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-bold shadow-sm transition-transform group-hover:scale-110"
@@ -1012,16 +1131,17 @@ export default function SchedulePage() {
                                 직접 추가
                               </span>
                             )}
-                            {slot.place.isDepopulationArea && (
-                              <span className="text-[10px] text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded font-bold whitespace-nowrap bg-emerald-50">
-                                로컬 픽
+                            {signalLabel && (
+                              <span className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-bold ${getPlaceSignalBadgeClass(slot.place)}`}>
+                                {signalLabel}
                               </span>
                             )}
                           </div>
                         </div>
                         <p className="text-sm text-zinc-700">{slot.place.address}</p>
                       </div>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -1106,6 +1226,7 @@ export default function SchedulePage() {
                   {placeCandidates.map((place) => {
                     const alreadyAdded = place.alreadyAdded || existingPlaceIds.has(place.id);
                     const isAdding = addingPlaceId === place.id;
+                    const signalLabel = getPlaceSignalLabel(place);
 
                     return (
                       <div key={place.id} className="rounded-[20px] border border-zinc-200 bg-white px-4 py-4 shadow-sm">
@@ -1113,8 +1234,10 @@ export default function SchedulePage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <p className="font-bold text-zinc-900">{place.name}</p>
-                              {place.isDepopulationArea ? (
-                                <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">로컬 픽</span>
+                              {signalLabel ? (
+                                <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${getPlaceSignalBadgeClass(place)}`}>
+                                  {signalLabel}
+                                </span>
                               ) : null}
                             </div>
                             <p className="mt-1 text-sm font-normal leading-relaxed text-zinc-700">{place.address}</p>
@@ -1162,8 +1285,8 @@ export default function SchedulePage() {
               <div className="p-6 pt-10">
                 <div className="mb-3 flex items-center gap-2">
                   {detailModalSlot.isLocal && (
-                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-normal text-emerald-700">
-                      로컬 픽
+                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-normal ${getPlaceSignalBadgeClass(detailModalSlot.slot.place)}`}>
+                      {getPlaceSignalLabel(detailModalSlot.slot.place) ?? '지역상생 추천 장소'}
                     </span>
                   )}
                   {detailModalSlot.slot.slotType === 'personal' && detailModalSlot.slot.targetNickname && (

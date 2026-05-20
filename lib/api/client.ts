@@ -66,7 +66,7 @@ export const roomApi = {
   getConflictMap: (id: number) => apiClient.get(`/rooms/${id}/conflict-map`),
 
   generateSchedule: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>
-    apiClient.post(`/rooms/${id}/generate-schedule`, data),
+    apiClient.post(`/rooms/${id}/generate-schedule`, data, { timeout: 120000 }),
 
   confirmSchedule: (id: number, data: { optionType: string }) =>
     apiClient.post(`/rooms/${id}/confirm-schedule`, data),
@@ -83,7 +83,7 @@ export const scheduleApi = {
   reorderSlots: (id: number, data: { slotIds: number[] }) =>
     apiClient.patch(`/schedules/${id}/slots/order`, data),
   regenerate: (id: number, data: { destination: string; tripDate: string; startTime: string; endTime: string; tripStartDate?: string; tripEndDate?: string }) =>
-    apiClient.post(`/schedules/${id}/regenerate`, data),
+    apiClient.post(`/schedules/${id}/regenerate`, data, { timeout: 120000 }),
   getAlbum: (id: number) => apiClient.get(`/schedules/${id}/album`),
   uploadPhoto: (id: number, slotId: number, data: FormData) =>
     apiClient.post(`/schedules/${id}/album/slots/${slotId}/photos`, data, {

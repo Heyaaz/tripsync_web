@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: '**.visitkorea.or.kr' },
+      { protocol: 'http', hostname: '**.visitkorea.or.kr' },
       { protocol: 'https', hostname: '*.tistory.com' },
     ],
   },

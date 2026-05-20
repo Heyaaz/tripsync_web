@@ -45,3 +45,8 @@ next-env.d.ts
 .omx/
 .codex/
 .claude/
+# local IDE settings
+.idea/
+*.iml
+*.ipr
+*.iws

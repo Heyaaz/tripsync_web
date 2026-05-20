@@ -4,7 +4,7 @@ set -euo pipefail
 
 WEB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT_DIR="$(cd "$WEB_DIR/.." && pwd)"
-SERVER_DIR="$ROOT_DIR/tmti_server_spring"
+SERVER_DIR="$ROOT_DIR/tmti_server"
 LEGACY_ENV_FILE="$ROOT_DIR/tmti_server/.env"
 
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-tripsync-postgres}"

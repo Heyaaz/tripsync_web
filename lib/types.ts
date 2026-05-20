@@ -120,9 +120,16 @@ export interface Place {
   name: string;
   address: string;
   imageUrl?: string;
+  imageSource?: 'tourapi' | 'google_places' | string | null;
   description?: string;
   category?: string;
   isDepopulationArea?: boolean;
+  isRegionalBenefit?: boolean;
+  popularity?: {
+    role?: 'popular_anchor' | 'regional_benefit' | 'balanced' | 'unverified' | string;
+    label?: string;
+    hasExternalSignal?: boolean;
+  };
   latitude?: number;
   longitude?: number;
   alreadyAdded?: boolean;
@@ -184,6 +191,8 @@ export interface Schedule {
   roomId: number;
   destination?: string;
   tripDate?: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
   version: number;
   groupSatisfaction: number;
   summary: string;
@@ -199,6 +208,8 @@ export interface PublicShareSchedule {
   scheduleId: number;
   destination: string;
   tripDate: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
   optionType: OptionType;
   summary: string;
   groupSatisfaction: number;
@@ -247,6 +258,8 @@ export interface TripPhotoAlbum {
   roomId: number;
   destination?: string;
   tripDate?: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
   isConfirmed: boolean;
   totalPhotoCount: number;
   slots: TripPhotoAlbumSlot[];

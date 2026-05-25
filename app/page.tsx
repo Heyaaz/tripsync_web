@@ -219,8 +219,8 @@ function MyRoomsPanel() {
   return (
     <section className="mb-24 space-y-5">
       {archivedRooms.length > 0 ? (
-        <div className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_16px_42px_rgba(16,185,129,0.08)]">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700 ring-1 ring-emerald-100">
                 <iconify-icon icon="solar:gallery-wide-bold-duotone" width="15"></iconify-icon>
@@ -242,10 +242,12 @@ function MyRoomsPanel() {
               <Link
                 key={room.roomId}
                 href={albumHref(room)}
-                className="spring group overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200"
+                className="spring group rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-emerald-200"
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
-                  <iconify-icon icon="solar:album-bold-duotone" width="23"></iconify-icon>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                    여행기
+                  </span>
                 </div>
                 <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
                 <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
@@ -261,55 +263,55 @@ function MyRoomsPanel() {
         </div>
       ) : null}
 
-      <div className="rounded-[28px] border border-blue-100 bg-white p-6 shadow-[0_16px_42px_rgba(37,99,235,0.08)]">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
-            <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
-            내 여행 계획
-          </div>
-          <h2 className="text-2xl font-black tracking-tight text-zinc-900">내 여행 계획으로 다시 이동</h2>
-          <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
-            홈으로 돌아와도 참여 중인 여행 계획을 바로 이어서 확인할 수 있습니다.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Link href="/mypage" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
-            전체보기
-            <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
-          </Link>
-          <Link href="/rooms/new" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(15,23,42,0.18)]">
-            새 방 만들기
-            <iconify-icon icon="solar:add-circle-bold" width="15"></iconify-icon>
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        {visibleRooms.map((room) => (
-          <Link
-            key={room.roomId}
-            href={roomEntryHref(room)}
-            className="spring group rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200"
-            onClick={() => setCurrentRoom(room)}
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>
-                {roomStatusLabel(room)}
-              </span>
-              <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
+      <div className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
+              <iconify-icon icon="solar:home-smile-angle-bold-duotone" width="15"></iconify-icon>
+              내 여행 계획
             </div>
-            <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
-            <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
-                {formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}
+            <h2 className="text-2xl font-black tracking-tight text-zinc-900">내 여행 계획</h2>
+            <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700 break-keep-all">
+              홈으로 돌아와도 참여 중인 여행 계획을 바로 이어서 확인할 수 있습니다.
             </p>
-            <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-blue-600">
-              {roomEntryLabel(room)}
-              <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
-            </div>
-          </Link>
-        ))}
-      </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/mypage" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+              전체보기
+              <iconify-icon icon="solar:alt-arrow-right-bold" width="13"></iconify-icon>
+            </Link>
+            <Link href="/rooms/new" className="spring inline-flex items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_22px_rgba(15,23,42,0.18)]">
+              새 방 만들기
+              <iconify-icon icon="solar:add-circle-bold" width="15"></iconify-icon>
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {visibleRooms.map((room) => (
+            <Link
+              key={room.roomId}
+              href={roomEntryHref(room)}
+              className="spring group rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200"
+              onClick={() => setCurrentRoom(room)}
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>
+                  {roomStatusLabel(room)}
+                </span>
+                <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
+              </div>
+              <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
+              <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">
+                {formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}
+              </p>
+              <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-blue-600">
+                {roomEntryLabel(room)}
+                <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );

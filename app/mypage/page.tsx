@@ -391,7 +391,7 @@ export default function MyPage() {
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_16px_42px_rgba(16,185,129,0.08)]">
+            <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
@@ -407,7 +407,7 @@ export default function MyPage() {
                   <button
                     type="button"
                     onClick={() => setIsArchiveOpen((open) => !open)}
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-white text-emerald-700 shadow-[0_8px_20px_rgba(16,185,129,0.08)] transition hover:-translate-y-0.5"
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-emerald-700 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5"
                     aria-label={isArchiveOpen ? '나의 여행기 접기' : '나의 여행기 펼치기'}
                     aria-expanded={isArchiveOpen}
                   >
@@ -429,10 +429,10 @@ export default function MyPage() {
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {archivedRooms.map((room) => (
-                    <article key={room.roomId} className="spring group relative overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/70 shadow-[0_8px_22px_rgba(16,185,129,0.06)] hover:border-emerald-200">
+                    <article key={room.roomId} className="spring group relative rounded-2xl border border-zinc-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-emerald-200">
                       <Link href={albumHref(room)} className="block p-5" onClick={() => setCurrentRoom(room)}>
-                        <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
-                          <iconify-icon icon="solar:album-bold-duotone" width="23"></iconify-icon>
+                        <div className="mb-3 flex items-center gap-3">
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">여행기</span>
                         </div>
                         <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
                         <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>

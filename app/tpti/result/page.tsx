@@ -69,6 +69,10 @@ export default function TptiResultPage() {
     }, 2500);
   }
 
+  function handleRetake() {
+    window.location.assign('/tpti?retake=1');
+  }
+
   async function handleSystemShare() {
     if (!shareUrl) {
       updateShareFeedback('공유용 결과를 아직 준비하지 못했어요.');
@@ -250,7 +254,8 @@ export default function TptiResultPage() {
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-4 animate-fadeInUp delay-4">
             <button
-              onClick={() => router.push('/tpti')}
+              type="button"
+              onClick={handleRetake}
               className="text-sm text-zinc-700 font-bold max-w-[240px] mx-auto"
             >
               검사 다시하기

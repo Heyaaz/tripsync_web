@@ -25,6 +25,13 @@ export default function TptiPage() {
     let cancelled = false;
 
     async function syncSavedResult() {
+      const isRetakeRequest = new URLSearchParams(window.location.search).get('retake') === '1';
+      if (isRetakeRequest) {
+        setTptiResult(null);
+        setCheckingSavedResult(false);
+        return;
+      }
+
       if (!user || user.isGuest) {
         setCheckingSavedResult(false);
         return;

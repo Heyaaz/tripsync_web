@@ -14,6 +14,14 @@ export const apiClient = axios.create({
   timeout: 15000,
 });
 
+apiClient.interceptors.response.use((response) => {
+  const payload = response.data as { success?: boolean; error?: { message?: string } } | undefined;
+  if (payload?.success === false) {
+    return Promise.reject({ response });
+  }
+  return response;
+});
+
 // ─── 인증 API ─────────────────────────────────────────────
 export const authApi = {
   register: (data: { nickname: string; email: string; password: string }) =>

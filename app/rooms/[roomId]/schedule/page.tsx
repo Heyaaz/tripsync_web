@@ -159,11 +159,11 @@ function PlaceDetailMeta({ place }: { place: Place }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-5 grid grid-cols-2 gap-2">
+    <div className="mb-5 grid grid-cols-2 gap-3">
       {items.map((item) => (
-        <div key={item.label} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-3">
+        <div key={item.label} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-4">
           <p className="text-[12px] font-bold text-zinc-500">{item.label}</p>
-          <p className="mt-1 truncate text-sm font-bold text-zinc-900">{item.value}</p>
+          <p className="mt-1 break-keep text-sm font-bold leading-snug text-zinc-900">{item.value}</p>
         </div>
       ))}
     </div>
@@ -1005,8 +1005,7 @@ export default function SchedulePage() {
                           key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
                           slots={[detailModalSlot.slot]}
                           initialOrderIndex={detailModalSlot.slot.orderIndex}
-                          scheduleTitle={`${detailModalSlot.scheduleTitle} → ${detailModalSlot.slot.place.name}`}
-                          scheduleSummary={detailModalSlot.slot.place.address}
+                          showHeader={false}
                         />
                       </div>
                       <div className="border-t border-zinc-100 bg-white px-4 py-3">
@@ -1392,8 +1391,7 @@ export default function SchedulePage() {
                         key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
                         slots={[detailModalSlot.slot]}
                         initialOrderIndex={detailModalSlot.slot.orderIndex}
-                        scheduleTitle={`${detailModalSlot.scheduleTitle} → ${detailModalSlot.slot.place.name}`}
-                        scheduleSummary={detailModalSlot.slot.place.address}
+                        showHeader={false}
                       />
                     </div>
                     <div className="border-t border-zinc-100 bg-white px-4 py-3">

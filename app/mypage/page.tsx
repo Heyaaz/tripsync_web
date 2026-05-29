@@ -391,7 +391,7 @@ export default function MyPage() {
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
+            <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06)] sm:p-6">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
@@ -427,16 +427,16 @@ export default function MyPage() {
                   <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">일정을 확정한 뒤 장소별 사진을 올리면 이곳에 여행기가 쌓입니다.</p>
                 </div>
               ) : (
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {archivedRooms.map((room) => (
                     <article key={room.roomId} className="spring group relative rounded-2xl border border-zinc-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-emerald-200">
-                      <Link href={albumHref(room)} className="block p-5" onClick={() => setCurrentRoom(room)}>
+                      <Link href={albumHref(room)} className="block p-4 sm:p-5" onClick={() => setCurrentRoom(room)}>
                         <div className="mb-3 flex items-center gap-3">
                           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">여행기</span>
                         </div>
-                        <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행`}</h3>
+                        <h3 className="truncate text-base font-black text-zinc-900 sm:text-lg">{room.roomName ?? `${room.destination} 여행`}</h3>
                         <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
-                        <div className="mt-5 flex items-center gap-1.5 text-sm font-bold text-emerald-700">
+                        <div className="mt-4 flex items-center gap-1.5 text-sm font-bold text-emerald-700">
                           추억 여행기 열기
                           <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
                         </div>
@@ -447,7 +447,7 @@ export default function MyPage() {
               ) : null}
             </section>
 
-            <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-[0_16px_42px_rgba(15,23,42,0.06)]">
+            <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06)] sm:p-6">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[12px] font-bold text-blue-700 ring-1 ring-blue-100">
@@ -481,22 +481,26 @@ export default function MyPage() {
                     <p className="mt-2 text-sm font-normal text-zinc-700">새 방을 만들거나 초대 링크로 참여해 보세요.</p>
                   </div>
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {rooms.map((room) => (
-                      <article key={room.roomId} className="spring relative rounded-2xl border border-zinc-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
-                        <Link href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="block p-5 pr-16">
-                          <div className="mb-3 flex items-center gap-3">
+                      <article key={room.roomId} className="spring group relative rounded-2xl border border-zinc-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)] hover:border-blue-200">
+                        <Link href={roomEntryHref(room)} onClick={() => setCurrentRoom(room)} className="block p-4 pr-14 sm:p-5 sm:pr-16">
+                          <div className="mb-3 flex items-center gap-2.5">
                             <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${roomStatusClassName(room)}`}>{roomStatusLabel(room)}</span>
-                            <span className="text-xs font-semibold text-zinc-500">{room.memberCount}명</span>
+                            <span className="text-sm font-semibold text-zinc-700">{room.memberCount}명</span>
                           </div>
-                          <h3 className="truncate text-lg font-black text-zinc-900">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
+                          <h3 className="truncate text-base font-black text-zinc-900 sm:text-lg">{room.roomName ?? `${room.destination} 여행 계획`}</h3>
                           <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">{formatTripDateRange(room.tripStartDate, room.tripEndDate, room.tripDate)}</p>
+                          <div className="mt-4 flex items-center gap-1.5 text-sm font-bold text-blue-700">
+                            일정 이어보기
+                            <iconify-icon icon="solar:alt-arrow-right-bold" width="13" className="transition-transform group-hover:translate-x-0.5"></iconify-icon>
+                          </div>
                         </Link>
                         <button
                           type="button"
                           onClick={() => setDeleteTargetRoom(room)}
                           disabled={deletingRoomId === room.roomId}
-                          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-[0_8px_18px_rgba(239,68,68,0.08)] transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-[0_8px_18px_rgba(239,68,68,0.08)] transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:right-4 sm:top-4 sm:h-9 sm:w-9"
                           aria-label={room.hostUserId === user.id ? '여행 방 삭제' : '여행 방 나가기'}
                         >
                           <iconify-icon icon={roomActionIcon(room, user.id, deletingRoomId === room.roomId)} width="17"></iconify-icon>

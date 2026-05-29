@@ -56,6 +56,26 @@ function cleanDisplayText(text?: string | null) {
     .trim();
 }
 
+function getAlbumSlotDateKey(slot: TripPhotoAlbumSlot) {
+  return slot.startTime?.slice(0, 10) || 'date-unknown';
+}
+
+function getAlbumDayGroups(slots: TripPhotoAlbumSlot[]) {
+  const dateKeys = Array.from(new Set(slots.map(getAlbumSlotDateKey)));
+
+  return dateKeys.map((dateKey, index) => ({
+    dateKey,
+    dayIndex: index + 1,
+    dateLabel: dateKey === 'date-unknown' ? '날짜 미정' : dateKey,
+    slots: slots.filter((slot) => getAlbumSlotDateKey(slot) === dateKey),
+  }));
+}
+
+function getAlbumSlotDayIndex(slots: TripPhotoAlbumSlot[], slot: TripPhotoAlbumSlot) {
+  const dateKeys = Array.from(new Set(slots.map(getAlbumSlotDateKey)));
+  return dateKeys.indexOf(getAlbumSlotDateKey(slot)) + 1;
+}
+
 function albumSlotToScheduleSlot(slot: TripPhotoAlbumSlot): ScheduleSlot {
   return {
     slotId: slot.scheduleSlotId,
@@ -105,6 +125,7 @@ export default function ScheduleAlbumPage() {
   const representativePhotos = useMemo(() => {
     return album?.slots.flatMap((slot) => slot.photos.slice(0, 2)).slice(0, 6) ?? [];
   }, [album]);
+  const dayGroups = useMemo(() => getAlbumDayGroups(album?.slots ?? []), [album?.slots]);
 
   const loadAlbum = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
     if (!Number.isFinite(scheduleId)) {
@@ -342,9 +363,24 @@ export default function ScheduleAlbumPage() {
             <p className="mt-2 text-sm font-normal leading-relaxed text-zinc-700">확정 일정에 장소 슬롯이 생기면 사진 업로드 카드가 표시됩니다.</p>
           </section>
         ) : (
-          <section className="space-y-5">
-            {album?.slots.map((slot) => (
-              <article key={slot.scheduleSlotId} className="card-app overflow-hidden p-5 md:p-6">
+          <section className="space-y-6">
+            {dayGroups.map((group) => (
+              <div key={group.dateKey} className="space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-3 px-1">
+                  <div>
+                    <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
+                      {group.dayIndex}일차
+                    </span>
+                    <h2 className="mt-2 text-xl font-black tracking-tight text-zinc-900">{group.dateLabel}</h2>
+                  </div>
+                  <p className="text-sm font-normal leading-relaxed text-zinc-700">
+                    {group.slots.length}개 코스
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {group.slots.map((slot) => (
+                    <article key={slot.scheduleSlotId} className="card-app overflow-hidden p-5 md:p-6">
                 <div className="mb-5 flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
                   <button
                     type="button"
@@ -354,6 +390,9 @@ export default function ScheduleAlbumPage() {
                   >
                     <div className="p-1">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[12px] font-semibold text-blue-700">
+                          {group.dayIndex}일차
+                        </span>
                         <span className="inline-flex shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12px] font-semibold text-zinc-700">
                           {slot.orderIndex}번째 코스
                         </span>
@@ -434,7 +473,10 @@ export default function ScheduleAlbumPage() {
                     ))}
                   </div>
                 )}
-              </article>
+                    </article>
+                  ))}
+                </div>
+              </div>
             ))}
           </section>
         )}
@@ -501,6 +543,7 @@ export default function ScheduleAlbumPage() {
         const description = cleanDisplayText(detailSlot.place.description);
         const scheduleTitle = '확정 일정';
         const scheduleSummary = detailSlot.place.address;
+        const detailDayIndex = getAlbumSlotDayIndex(album?.slots ?? [], detailSlot);
 
         return (
           <div className="fixed inset-0 z-[105] flex items-start justify-center overflow-y-auto overscroll-contain p-4 sm:items-center">
@@ -523,6 +566,9 @@ export default function ScheduleAlbumPage() {
                     </span>
                   ) : null}
                   <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
+                    {detailDayIndex}일차
+                  </span>
+                  <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm font-bold text-zinc-700">
                     {detailSlot.orderIndex}번째 코스
                   </span>
                 </div>

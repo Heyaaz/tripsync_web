@@ -98,6 +98,78 @@ function getDisplayImageUrl(imageUrl?: string | null) {
   return imageUrl;
 }
 
+function getPlaceCategoryLabel(category?: string | null) {
+  if (!category) return null;
+
+  const labels: Record<string, string> = {
+    tourist_attraction: '관광지',
+    cultural_facility: '문화시설',
+    festival: '축제·공연',
+    leisure_sports: '레저·스포츠',
+    accommodation: '숙박',
+    shopping: '쇼핑',
+    restaurant: '음식점',
+    etc: '기타',
+  };
+
+  return labels[category] ?? category;
+}
+
+function PlaceHeroImage({ place }: { place: Place }) {
+  const primaryImageSrc = getDisplayImageUrl(place.imageUrl) ?? place.imageUrl ?? null;
+  const [imageSrc, setImageSrc] = useState(primaryImageSrc);
+  const fallbackImageSrc = getDisplayImageUrl(place.fallbackImageUrl) ?? place.fallbackImageUrl ?? null;
+
+  useEffect(() => {
+    setImageSrc(primaryImageSrc);
+  }, [primaryImageSrc]);
+
+  if (!imageSrc) return null;
+
+  return (
+    <div className="relative h-36 w-full overflow-hidden bg-zinc-100 sm:h-44">
+      <Image
+        src={imageSrc}
+        alt={place.name}
+        fill
+        sizes="(max-width: 640px) 100vw, 448px"
+        className="object-cover"
+        unoptimized
+        onError={() => {
+          if (fallbackImageSrc && imageSrc !== fallbackImageSrc) {
+            setImageSrc(fallbackImageSrc);
+            return;
+          }
+          setImageSrc(null);
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent" />
+    </div>
+  );
+}
+
+function PlaceDetailMeta({ place }: { place: Place }) {
+  const popularityLabel = getPlaceSignalLabel(place);
+  const categoryLabel = getPlaceCategoryLabel(place.category);
+  const items = [
+    categoryLabel ? { label: '분류', value: categoryLabel } : null,
+    popularityLabel ? { label: '추천 신호', value: popularityLabel } : null,
+  ].filter((item): item is { label: string; value: string } => Boolean(item));
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-2">
+      {items.map((item) => (
+        <div key={item.label} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-3">
+          <p className="text-[12px] font-bold text-zinc-500">{item.label}</p>
+          <p className="mt-1 truncate text-sm font-bold text-zinc-900">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function getOptionSignalSummary(option?: ScheduleOption | null) {
   const slots = option?.slots ?? [];
   const popularAnchorCount = slots.filter((slot) => slot.place.popularity?.role === 'popular_anchor').length;
@@ -892,18 +964,7 @@ export default function SchedulePage() {
 
               {modalView === 'detail' ? (
                 <>
-                  {detailModalSlot.slot.place.imageUrl && (
-                    <div className="relative w-full aspect-video bg-zinc-100">
-                      <Image
-                        src={getDisplayImageUrl(detailModalSlot.slot.place.imageUrl) ?? detailModalSlot.slot.place.imageUrl}
-                        alt={detailModalSlot.slot.place.name}
-                        fill
-                        sizes="(max-width: 640px) 100vw, 384px"
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                    </div>
-                  )}
+                  <PlaceHeroImage place={detailModalSlot.slot.place} />
 
                   <div className={`p-6 ${detailModalSlot.slot.place.imageUrl ? '-mt-6 relative z-10 bg-white rounded-t-[24px]' : 'pt-10'}`}>
                     <div className="flex items-center gap-2 mb-3">
@@ -920,7 +981,8 @@ export default function SchedulePage() {
                     </div>
                     
                     <h3 className="text-xl font-bold text-zinc-900 mb-1">{detailModalSlot.slot.place.name}</h3>
-                    <p className="text-sm text-zinc-600 mb-5">{detailModalSlot.slot.place.address}</p>
+                    <p className="mb-4 text-sm font-normal leading-relaxed text-zinc-700">{detailModalSlot.slot.place.address}</p>
+                    <PlaceDetailMeta place={detailModalSlot.slot.place} />
 
                     {detailModalSlot.slot.reason && (
                       <div className="bg-zinc-50 rounded-xl p-4 mb-6 border border-zinc-100">
@@ -932,13 +994,13 @@ export default function SchedulePage() {
                     )}
 
                     {detailModalSlot.slot.place.description ? (
-                      <div className="text-[14px] text-zinc-700 leading-relaxed font-normal mb-8 whitespace-pre-wrap break-keep-all">
-                        {detailModalSlot.slot.place.description}
+                      <div className="mb-6 whitespace-pre-wrap break-keep-all text-sm font-normal leading-relaxed text-zinc-700">
+                        {cleanDisplayText(detailModalSlot.slot.place.description)}
                       </div>
                     ) : null}
 
                     <div className="mb-6 overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-50">
-                      <div className="h-[360px] overflow-hidden">
+                      <div className="h-52 overflow-hidden sm:h-60">
                         <ScheduleMapModalView
                           key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
                           slots={[detailModalSlot.slot]}
@@ -955,7 +1017,7 @@ export default function SchedulePage() {
                           className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-bold text-blue-700 transition hover:bg-blue-100"
                         >
                           <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
-                          카카오맵에서 열기
+                          카카오맵에서 리뷰 보기
                         </a>
                       </div>
                     </div>
@@ -1282,74 +1344,79 @@ export default function SchedulePage() {
               ✕
             </button>
             {modalView === 'detail' ? (
-              <div className="p-6 pt-10">
-                <div className="mb-3 flex items-center gap-2">
-                  {detailModalSlot.isLocal && (
-                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-normal ${getPlaceSignalBadgeClass(detailModalSlot.slot.place)}`}>
-                      {getPlaceSignalLabel(detailModalSlot.slot.place) ?? '지역상생 추천 장소'}
-                    </span>
-                  )}
-                  {detailModalSlot.slot.slotType === 'personal' && detailModalSlot.slot.targetNickname && (
-                    <span
-                      className="rounded-full border px-2.5 py-1 text-[11px] font-normal"
-                      style={{
-                        borderColor: `${detailModalSlot.accentColor}40`,
-                        color: detailModalSlot.accentColor,
-                        backgroundColor: `${detailModalSlot.accentColor}10`,
-                      }}
-                    >
-                      {detailModalSlot.slot.targetNickname} 취향 반영
-                    </span>
-                  )}
+              <>
+                <PlaceHeroImage place={detailModalSlot.slot.place} />
+
+                <div className={`p-6 ${detailModalSlot.slot.place.imageUrl ? '-mt-6 relative z-10 rounded-t-[24px] bg-white' : 'pt-10'}`}>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    {detailModalSlot.isLocal && (
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-normal ${getPlaceSignalBadgeClass(detailModalSlot.slot.place)}`}>
+                        {getPlaceSignalLabel(detailModalSlot.slot.place) ?? '지역상생 추천 장소'}
+                      </span>
+                    )}
+                    {detailModalSlot.slot.slotType === 'personal' && detailModalSlot.slot.targetNickname && (
+                      <span
+                        className="rounded-full border px-2.5 py-1 text-[11px] font-normal"
+                        style={{
+                          borderColor: `${detailModalSlot.accentColor}40`,
+                          color: detailModalSlot.accentColor,
+                          backgroundColor: `${detailModalSlot.accentColor}10`,
+                        }}
+                      >
+                        {detailModalSlot.slot.targetNickname} 취향 반영
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mb-1 text-xl font-bold text-zinc-900">{detailModalSlot.slot.place.name}</h3>
+                  <p className="mb-4 text-sm font-normal leading-relaxed text-zinc-700">{detailModalSlot.slot.place.address}</p>
+                  <PlaceDetailMeta place={detailModalSlot.slot.place} />
+
+                  {detailModalSlot.slot.reason ? (
+                    <div className="mb-6 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+                      <p className="flex items-start gap-2 text-sm leading-relaxed text-zinc-700">
+                        <iconify-icon icon="solar:info-circle-bold-duotone" className="mt-0.5 shrink-0 text-lg text-blue-500"></iconify-icon>
+                        {cleanDisplayText(detailModalSlot.slot.reason)}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {detailModalSlot.slot.place.description ? (
+                    <div className="mb-6 whitespace-pre-wrap break-keep-all text-sm font-normal leading-relaxed text-zinc-700">
+                      {cleanDisplayText(detailModalSlot.slot.place.description)}
+                    </div>
+                  ) : null}
+
+                  <div className="mb-6 overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-50">
+                    <div className="h-52 overflow-hidden sm:h-60">
+                      <ScheduleMapModalView
+                        key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
+                        slots={[detailModalSlot.slot]}
+                        initialOrderIndex={detailModalSlot.slot.orderIndex}
+                        scheduleTitle={`${detailModalSlot.scheduleTitle} → ${detailModalSlot.slot.place.name}`}
+                        scheduleSummary={detailModalSlot.slot.place.address}
+                      />
+                    </div>
+                    <div className="border-t border-zinc-100 bg-white px-4 py-3">
+                      <a
+                        href={`https://map.kakao.com/link/search/${encodeURIComponent(detailModalSlot.slot.place.name)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-bold text-blue-700 transition hover:bg-blue-100"
+                      >
+                        <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
+                        카카오맵에서 리뷰 보기
+                      </a>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setDetailModalSlot(null)}
+                    className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-colors hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2"
+                  >
+                    확인
+                  </button>
                 </div>
-                <h3 className="mb-1 text-xl font-bold text-zinc-900">{detailModalSlot.slot.place.name}</h3>
-                <p className="mb-5 text-sm text-zinc-600">{detailModalSlot.slot.place.address}</p>
-
-                {detailModalSlot.slot.reason ? (
-                  <div className="mb-6 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                    <p className="flex items-start gap-2 text-sm leading-relaxed text-zinc-700">
-                      <iconify-icon icon="solar:info-circle-bold-duotone" className="mt-0.5 shrink-0 text-lg text-blue-500"></iconify-icon>
-                      {cleanDisplayText(detailModalSlot.slot.reason)}
-                    </p>
-                  </div>
-                ) : null}
-
-                {detailModalSlot.slot.place.description ? (
-                  <div className="mb-8 whitespace-pre-wrap break-keep-all text-[14px] font-normal leading-relaxed text-zinc-700">
-                    {cleanDisplayText(detailModalSlot.slot.place.description)}
-                  </div>
-                ) : null}
-
-                <div className="mb-6 overflow-hidden rounded-[20px] border border-zinc-200 bg-zinc-50">
-                  <div className="h-[360px] overflow-hidden">
-                    <ScheduleMapModalView
-                      key={`detail-map:${detailModalSlot.slot.orderIndex}:${detailModalSlot.slot.place.id}`}
-                      slots={[detailModalSlot.slot]}
-                      initialOrderIndex={detailModalSlot.slot.orderIndex}
-                      scheduleTitle={`${detailModalSlot.scheduleTitle} → ${detailModalSlot.slot.place.name}`}
-                      scheduleSummary={detailModalSlot.slot.place.address}
-                    />
-                  </div>
-                  <div className="border-t border-zinc-100 bg-white px-4 py-3">
-                    <a
-                      href={`https://map.kakao.com/link/search/${encodeURIComponent(detailModalSlot.slot.place.name)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-bold text-blue-700 transition hover:bg-blue-100"
-                    >
-                      <iconify-icon icon="solar:map-point-wave-bold-duotone" width="15"></iconify-icon>
-                      카카오맵에서 열기
-                    </a>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setDetailModalSlot(null)}
-                  className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-colors hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2"
-                >
-                  확인
-                </button>
-              </div>
+              </>
             ) : (
               <>
                 <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-zinc-100 bg-white p-4">

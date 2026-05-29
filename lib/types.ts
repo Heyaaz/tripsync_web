@@ -121,6 +121,8 @@ export interface Place {
   address: string;
   imageUrl?: string;
   imageSource?: 'tourapi' | 'google_places' | string | null;
+  fallbackImageUrl?: string | null;
+  fallbackImageSource?: 'tourapi' | 'google_places' | string | null;
   description?: string;
   category?: string;
   isDepopulationArea?: boolean;
@@ -129,6 +131,11 @@ export interface Place {
     role?: 'popular_anchor' | 'regional_benefit' | 'balanced' | 'unverified' | string;
     label?: string;
     hasExternalSignal?: boolean;
+    normalizedPopularityScore?: number;
+    naverSearchTrendScore?: number;
+    googleRating?: number;
+    googleUserRatingCount?: number;
+    sourceUpdatedAt?: string;
   };
   latitude?: number;
   longitude?: number;
